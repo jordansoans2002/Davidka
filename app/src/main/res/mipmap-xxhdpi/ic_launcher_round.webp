@@ -1,0 +1,141 @@
+package com.example.miniproject_2a;
+
+import android.content.ClipData;
+import android.view.DragEvent;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.snackbar.Snackbar;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+
+public class SessionsAdapter extends RecyclerView.Adapter<SessionsAdapter.ItemViewHolder> {
+
+    private List<PrintSession> sessions;
+    SessionDocsAdapter adapter;
+    private List<String> docs = new ArrayList<>();
+
+    public SessionsAdapter(List<PrintSession> sessions){
+        this.sessions = sessions;
+    }
+
+    public void setSessions(List<PrintSession> sessions) {
+        this.sessions = sessions;
+    }
+
+    @NonNull
+    @Override
+    public ItemViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.queue_item,parent,false);
+        return new ItemViewHolder (view);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull ItemViewHolder holder, int position) {
+        PrintSession model = sessions.get(position);
+
+        holder.timeSlot.setText(model.getTimeSlot());
+        holder.docCount.setText("Documents: " + model.getDocCount());
+        holder.pages.setText("Pages: " + model.getPages());
+
+        boolean isExpandable = model.isExpandable();
+        holder.expandable.setVisibility(isExpandable ? View.GONE : View.VISIBLE);
+        holder.arrow.setImageResource(isExpandable ? R.drawable.ic_baseline_keyboard_arrow_down_24 : R.drawable.ic_baseline_keyboard_arrow_up_24);
+
+        docs = model.getSessionDocs();
+        adapter = new SessionDocsAdapter(docs);
+        holder.sessionDocs.setLayoutManager(new LinearLayoutManager(holder.itemView.getContext()));
+        holder.sessionDocs.setAdapter(adapter);
+
+        holder.arrow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                model.setExpandable(!model.isExpandable());
+                docs = model.getSessionDocs();
+                notifyItemChanged(holder.getAdapterPosition());
+            }
+        });
+
+        holder.deleteSession.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                int pos =  holder.getAdapterPosition();
+                PrintSession removedSession = sessions.get(pos);
+                sessions.remove(pos);
+                notifyItemRemoved(pos);
+                System.out.println(sessions);
+                Snackbar.make(view,removedSession.getTimeSlot()+" deleted",Snackbar.LENGTH_LONG)
+                        .setAction("Undo", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                sessions.add(pos, removedSession);
+                                notifyItemInserted(pos);
+                            }
+                        }).show();
+            }
+        });
+
+//        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleCallback);
+//        itemTouchHelper.attachToRecyclerView(holder.sessionDocs);
+
+        //doc is removed from parent list when drag starts
+        //doc is added to first position in destination when drag ends
+        holder.sessionCard.setOnDragListener(new View.OnDragListener() {
+            @Override
+            public boolean onDrag(View view, DragEvent dragEvent) {
+                int pos= holder.getAdapterPosition();
+                switch (dragEvent.getAction()){
+                    case DragEvent.ACTION_DRAG_STARTED:
+                        System.out.println("drag detected "+ pos);
+                        return true;//dragEvent.getClipDescription().hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN);
+
+                    case DragEvent.ACTION_DRAG_ENTERED:
+                        System.out.println("entered "+ pos);
+                        view.invalidate();
+                        model.setExpandable(false);
+                        docs = model.getSessionDocs();
+                        notifyItemChanged(pos);
+                    return true;
+
+                    case DragEvent.ACTION_DRAG_EXITED:
+                        System.out.println("entered "+ pos);
+                        view.invalidate();
+                        model.setExpandable(true);
+                        docs = model.getSessionDocs();
+                        notifyItemChanged(pos);
+                    return true;
+
+                    case DragEvent.ACTION_DRAG_LOCATION:
+                        System.out.println(pos+" entered location");
+                    return true;
+
+                    case DragEvent.ACTION_DROP:
+                        System.out.println(pos+" drop detected ");
+                        ClipData.Item item = dragEvent.getClipData().getItemAt(0);
+                        String doc = (String) item.getText();
+
+                        view.invalidate();
+
+                        //removed from the other side
+//                        View v = (View) dragEvent.getLocalState();
+//                        ViewGroup parent = (ViewGroup) v.getParent();
+//                        parent.removeView(v);
+
+                        docs.add(doc);
+                        adapter.notifyItemInserted(docs.size()-1);
+   
