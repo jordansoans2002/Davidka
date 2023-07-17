@@ -19,6 +19,10 @@ public class SpeakButton {
     @Ignore
     MediaPlayer audio;
 
+    public SpeakButton(int position){
+        this.position = position;
+    }
+
     public int getPosition() {
         return position;
     }

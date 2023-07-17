@@ -10,11 +10,11 @@ import java.util.List;
 @androidx.room.Dao
 public interface SpeakButtonDao {
 
-    @Query("select speak from SpeakButton where position = :pos")
-    String getSpeak(int pos);
-
-    @Query("select picture from SpeakButton where position = :pos")
-    String getPicture(int pos);
+//    @Query("select speak from SpeakButton where position = :pos")
+//    String getSpeak(int pos);
+//
+//    @Query("select picture from SpeakButton where position = :pos")
+//    String getPicture(int pos);
 
     @Insert
     void addSpeakButton(SpeakButton speakButton);

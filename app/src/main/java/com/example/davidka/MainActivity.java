@@ -38,8 +38,7 @@ public class MainActivity extends AppCompatActivity {
 //        picture_grid.canScrollVertically(View.);
 
 
-
-        MediaPlayer startup = MediaPlayer.create(this,R.raw.davidka);
+        MediaPlayer startup = MediaPlayer.create(this, R.raw.davidka);
 //        startup.start();
 
 //        MediaPlayer sorry = MediaPlayer.create(this,R.raw.sorry);
@@ -69,26 +68,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     ActivityResultLauncher<Intent> getPermission = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
-                    new ActivityResultCallback<ActivityResult>() {
-        @Override
-        public void onActivityResult(ActivityResult o) {
-            if(o.getResultCode() == RESULT_OK)
-                Log.e("permision result","can use");
-        }
-    });
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult o) {
+                    if (o.getResultCode() == RESULT_OK)
+                        Log.e("permision result", "can use");
+                }
+            });
 
     @Override
     protected void onResume() {
         super.onResume();
 
-//        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.MANAGE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
-//
-//        }
-//        ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.MANAGE_EXTERNAL_STORAGE},100);
+        //TODO check and get all required permissions here
 
+        //TODO do all this on a seperate thread
         DatabaseHelper db = DatabaseHelper.getDB(this);
         this.buttons = db.speakButtonDao().getAllButtons();
-        if (buttons.size()==0) {
+        if (buttons.size() == 0) {
             for (int i = 0; i < 8; i++) {
                 SpeakButton button = new SpeakButton(i);
                 buttons.add(button);
@@ -97,11 +94,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         for (SpeakButton button : buttons)
-            Log.d("table contents", button.position+". image:" + button.picture + " speech:" + button.speak);
+            Log.d("table contents", button.position + ". image:" + button.picture + " speech:" + button.speak);
 
-        PictureGridAdapter adapter = new PictureGridAdapter(this,buttons);
+        PictureGridAdapter adapter = new PictureGridAdapter(this, buttons);
         picture_grid.setAdapter(adapter);
-        picture_grid.setLayoutManager(new GridLayoutManager(this,2));
+        picture_grid.setLayoutManager(new GridLayoutManager(this, 2));
     }
 
     @Override
@@ -114,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
 
-        if(id == R.id.edit_layout){
+        if (id == R.id.edit_layout) {
             Intent intent = new Intent(this, ChangeLayoutActivity.class);
             this.startActivity(intent);
         } else if (id == R.id.change_settings) {

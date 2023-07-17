@@ -12,6 +12,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -86,10 +87,27 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 
         }
 
-//        holder.spoken_text.on
+        //update the buttons text every time a key is pressed
+        holder.spoken_text.setOnKeyListener((view, keyCode, keyEvent) -> {
+            buttons.get(holder.getAdapterPosition()).setSpokenText(holder.spoken_text.getText().toString());
+            Log.e("spoken text update",buttons.get(holder.getAdapterPosition()).getSpokenText());
+            return true;
+        });
+//        holder.spoken_text.setOnEditorActionListener(((textView, actionId, keyEvent) -> {
+//            buttons.get(holder.getAdapterPosition()).setSpokenText(textView.getText().toString());
+//            Log.e("spoken text update",buttons.get(holder.getAdapterPosition()).getSpokenText());
+//            return true;
+//        }));
+
+        //update the text every time the keyboard is closed or the focus moves from the EditText
+//        holder.spoken_text.setOnFocusChangeListener((view, hasFocus) -> {
+//            if(hasFocus)
+//        });
 
         //TODO long press and hold to record
-//        holder.change_audio.setOnLongClickListener((View view) -> {
+        holder.change_audio.setOnLongClickListener((View view) -> {
+            Log.e("long press status","long click detected");
+            //TODO need to find a way to stop recording when the user leaves the button
 //            ActivityCompat.requestPermissions(changeLayoutActivity, new String[]{Manifest.permission.RECORD_AUDIO}, changeLayoutActivity.REQUEST_RECORD_AUDIO_PERMISSION);
 //            MediaRecorder recorder = new MediaRecorder();
 //            recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
@@ -107,8 +125,8 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 //                Log.e("create recorder", "prepare() failed");
 //            }
 //            recorder.start();
-//            return true;
-//        });
+            return true;
+        });
 
 //        holder.change_audio.onTouchEvent((MotionEvent event) -> {
 //           switch (event.getAction()){
@@ -162,12 +180,12 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             ChangeLayoutActivity.pos = holder.getAdapterPosition();
 
             //images and video but cannot click using camera
-            getImage.launch(new PickVisualMediaRequest.Builder()
-                    .setMediaType(ActivityResultContracts.PickVisualMedia.ImageAndVideo.INSTANCE)
-                    .build());
+//            getImage.launch(new PickVisualMediaRequest.Builder()
+//                    .setMediaType(ActivityResultContracts.PickVisualMedia.ImageAndVideo.INSTANCE)
+//                    .build());
 
             //only images
-//            pickImage.launch(chooserIntent);
+            pickImage.launch(chooserIntent);
         });
 
         holder.audio_control.setOnClickListener((View v) -> {

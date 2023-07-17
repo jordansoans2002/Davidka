@@ -48,8 +48,6 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 SpeakButton button = buttons.get(pos);
                 button.setSpeak(uri.toString());
                 adapter.notifyItemChanged(pos);
-                DatabaseHelper db = DatabaseHelper.getDB(ChangeLayoutActivity.this);
-                db.speakButtonDao().updateSpeakButton(buttons.get(pos));
 //            } else {
 //                Log.d("choose intent", "no uri in data");
             } catch (Exception e) {
@@ -98,8 +96,6 @@ public class ChangeLayoutActivity extends AppCompatActivity {
             SpeakButton button = buttons.get(pos);
             button.setPicture(resultUri.toString());
             adapter.notifyItemChanged(pos);
-            DatabaseHelper db = DatabaseHelper.getDB(ChangeLayoutActivity.this);
-            db.speakButtonDao().updateSpeakButton(buttons.get(pos));
         } else if (resultCode == UCrop.RESULT_ERROR) {
             final Throwable cropError = UCrop.getError(data);
         }
@@ -139,21 +135,24 @@ public class ChangeLayoutActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        int id = item.getItemId();
-
-        Intent intent = new Intent(this, MainActivity.class);
-
-        if (id == R.id.save_changes) {
-            //TODO create a popup to confirm then go back to home
-            //TODO save all the text according to their position into the database
-            DatabaseHelper db = DatabaseHelper.getDB(ChangeLayoutActivity.this);
-            for(SpeakButton button:buttons)
-                db.speakButtonDao().updateSpeakButton(button);
-        } else if (id == R.id.cancel_changes) {
-            //TODO create a popup to confirm
-            //if back is pressed use same popup
+        switch(item.getItemId()) {
+            case R.id.save_changes:
+                AlertBox keepChanges = new AlertBox(
+                        this,
+                        "Keep changes",
+                        "Save changes made to all buttons?");
+                keepChanges.createAlertBox(buttons);
+                return true;
+            case R.id.cancel_changes:
+                AlertBox discardChanges = new AlertBox(
+                        adapter.changeLayoutActivity,
+                        "Discard changes",
+                        "Discard changes made to all buttons?");
+                discardChanges.createAlertBox();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
         }
-        return super.onOptionsItemSelected(item);
     }
 
 }
