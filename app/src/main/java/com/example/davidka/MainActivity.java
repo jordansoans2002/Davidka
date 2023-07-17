@@ -1,19 +1,30 @@
 package com.example.davidka;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
+    List<SpeakButton> buttons = new ArrayList<>();
     RecyclerView picture_grid;
 
     @Override
@@ -21,19 +32,19 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         picture_grid = findViewById(R.id.picture_grid);
-        PictureGridAdapter adapter = new PictureGridAdapter();
-        picture_grid.setAdapter(adapter);
-        picture_grid.setLayoutManager(new GridLayoutManager(this,2));
+//        PictureGridAdapter adapter = new PictureGridAdapter(this,buttons);
+//        picture_grid.setAdapter(adapter);
+//        picture_grid.setLayoutManager(new GridLayoutManager(this,2));
 //        picture_grid.canScrollVertically(View.);
 
 
 
         MediaPlayer startup = MediaPlayer.create(this,R.raw.davidka);
-        startup.start();
+//        startup.start();
 
-        MediaPlayer sorry = MediaPlayer.create(this,R.raw.sorry);
-        MediaPlayer thank_you = MediaPlayer.create(this,R.raw.thank_you);
-        MediaPlayer yes = MediaPlayer.create(this,R.raw.yes);
+//        MediaPlayer sorry = MediaPlayer.create(this,R.raw.sorry);
+//        MediaPlayer thank_you = MediaPlayer.create(this,R.raw.thank_you);
+//        MediaPlayer yes = MediaPlayer.create(this,R.raw.yes);
 
 //        findViewById(R.id.grid_1).setOnClickListener(new View.OnClickListener() {
 //            @Override
@@ -57,6 +68,42 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    ActivityResultLauncher<Intent> getPermission = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                    new ActivityResultCallback<ActivityResult>() {
+        @Override
+        public void onActivityResult(ActivityResult o) {
+            if(o.getResultCode() == RESULT_OK)
+                Log.e("permision result","can use");
+        }
+    });
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+//        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.MANAGE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+//
+//        }
+//        ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.MANAGE_EXTERNAL_STORAGE},100);
+
+        DatabaseHelper db = DatabaseHelper.getDB(this);
+        this.buttons = db.speakButtonDao().getAllButtons();
+        if (buttons.size()==0) {
+            for (int i = 0; i < 8; i++) {
+                SpeakButton button = new SpeakButton(i);
+                buttons.add(button);
+                db.speakButtonDao().addSpeakButton(button);
+            }
+        }
+
+        for (SpeakButton button : buttons)
+            Log.d("table contents", button.position+". image:" + button.picture + " speech:" + button.speak);
+
+        PictureGridAdapter adapter = new PictureGridAdapter(this,buttons);
+        picture_grid.setAdapter(adapter);
+        picture_grid.setLayoutManager(new GridLayoutManager(this,2));
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.home_action_bar, menu);
@@ -68,10 +115,10 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         if(id == R.id.edit_layout){
-            Intent intent = new Intent(this,EditLayoutActivity.class);
+            Intent intent = new Intent(this, ChangeLayoutActivity.class);
             this.startActivity(intent);
         } else if (id == R.id.change_settings) {
-            Intent intent = new Intent(this,EditLayoutActivity.class);
+            Intent intent = new Intent(this, ChangeLayoutActivity.class);
             this.startActivity(intent);
         }
 
