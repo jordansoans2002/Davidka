@@ -26,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
 
     List<SpeakButton> buttons = new ArrayList<>();
     RecyclerView picture_grid;
+    MediaPlayer speak;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
 //        picture_grid.canScrollVertically(View.);
 
 
-        MediaPlayer startup = MediaPlayer.create(this, R.raw.davidka);
+//        MediaPlayer startup = MediaPlayer.create(this, R.raw.davidka);
 //        startup.start();
 
 //        MediaPlayer sorry = MediaPlayer.create(this,R.raw.sorry);
@@ -110,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
-
+        speak.release();
         if (id == R.id.edit_layout) {
             Intent intent = new Intent(this, ChangeLayoutActivity.class);
             this.startActivity(intent);

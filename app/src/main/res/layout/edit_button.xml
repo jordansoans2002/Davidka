@@ -18,26 +18,13 @@
         <!--            android:gravity="start|top"-->
         <!--            android:inputType="textMultiLine" />-->
 
-        <EditText
-            android:id="@+id/spoken_text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ems="10"
-            android:hint="Enter text to be spoken"
-            android:inputType="textMultiLine"
-            android:selectAllOnFocus="true"
-            android:singleLine="false"
-            android:textSize="14sp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
         <ImageView
             android:id="@+id/audio_control"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_marginTop="8dp"
             app:layout_constraintStart_toStartOf="@+id/spoken_text"
-            app:layout_constraintTop_toBottomOf="@+id/spoken_text"
+            app:layout_constraintTop_toTopOf="parent"
             app:srcCompat="@drawable/baseline_play_arrow_24" />
 
         <SeekBar
@@ -66,7 +53,6 @@
             android:layout_height="160dp"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="4dp"
-            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/audio_control">
@@ -81,6 +67,20 @@
                 android:scaleType="centerInside"
                 app:srcCompat="@drawable/folded_hands" />
         </androidx.cardview.widget.CardView>
+
+        <EditText
+            android:id="@+id/spoken_text"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:ems="10"
+            android:hint="Enter text to be spoken"
+            android:inputType="textMultiLine"
+            android:selectAllOnFocus="true"
+            android:singleLine="false"
+            android:textSize="14sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/picture" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.cardview.widget.CardView>

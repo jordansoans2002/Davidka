@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Looper;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -40,8 +41,11 @@ import java.util.UUID;
 
 public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.ViewHolder> {
     ChangeLayoutActivity changeLayoutActivity;
-
     List<SpeakButton> buttons;
+    MediaPlayer speak;
+    MediaRecorder recorder;
+    Boolean longPress = false;
+
     ActivityResultLauncher<PickVisualMediaRequest> getImage;
     ActivityResultLauncher<Intent> pickAudio;
     ActivityResultLauncher<Intent> pickImage;
@@ -52,7 +56,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         this.pickImage = pickImage;
         this.buttons = buttons;
         for (SpeakButton button : buttons)
-            Log.d("table contents", button.position + ". image:" + button.picture + " speech:" + button.speak);
+            Log.d("table contents", button.position + ". image:" + button.getPicture() + " speech:" + button.getSpeak());
         this.getImage = changeLayoutActivity.registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
             if (uri != null) {
                 Log.d("PhotoPicker", "Selected URI: " + uri);
@@ -75,22 +79,19 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         holder.spoken_text.setText(ChangeLayoutActivity.buttons.get(position).getSpokenText());
         try {
-            Uri image = Uri.parse(ChangeLayoutActivity.buttons.get(position).picture);
+            Uri image = Uri.parse(ChangeLayoutActivity.buttons.get(position).getPicture());
             if (image != null)
                 holder.image.setImageURI(image);
-            Uri audio = Uri.parse(ChangeLayoutActivity.buttons.get(position).speak);
-            if (audio != null)
-                holder.speak = MediaPlayer.create(holder.audio_control.getContext(), audio);
         } catch (SecurityException e) {
             System.err.println("need uri permission at position " + position);
-        } catch (Exception e){
+        } catch (Exception e) {
 
         }
 
-        //update the buttons text every time a key is pressed
+        //TODO update the buttons text every time a key is pressed
         holder.spoken_text.setOnKeyListener((view, keyCode, keyEvent) -> {
             buttons.get(holder.getAdapterPosition()).setSpokenText(holder.spoken_text.getText().toString());
-            Log.e("spoken text update",buttons.get(holder.getAdapterPosition()).getSpokenText());
+            Log.e("spoken text update", buttons.get(holder.getAdapterPosition()).getSpokenText());
             return true;
         });
 //        holder.spoken_text.setOnEditorActionListener(((textView, actionId, keyEvent) -> {
@@ -104,37 +105,43 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 //            if(hasFocus)
 //        });
 
-        //TODO long press and hold to record
         holder.change_audio.setOnLongClickListener((View view) -> {
-            Log.e("long press status","long click detected");
-            //TODO need to find a way to stop recording when the user leaves the button
-//            ActivityCompat.requestPermissions(changeLayoutActivity, new String[]{Manifest.permission.RECORD_AUDIO}, changeLayoutActivity.REQUEST_RECORD_AUDIO_PERMISSION);
-//            MediaRecorder recorder = new MediaRecorder();
-//            recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-//            recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-//            String dest_uri = new StringBuilder(UUID.randomUUID().toString()).append(".jpg").toString();
-//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-//                recorder.setOutputFile(new File(changeLayoutActivity.getExternalFilesDir(Environment.DIRECTORY_RECORDINGS),dest_uri));
-//            }
-//            else
-//                recorder.setOutputFile(new File(changeLayoutActivity.getExternalFilesDir(Environment.DIRECTORY_MUSIC),dest_uri));
-//            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB);
-//            try {
-//                recorder.prepare();
-//            } catch (IOException e) {
-//                Log.e("create recorder", "prepare() failed");
-//            }
-//            recorder.start();
+            Log.e("long press status", "long click detected");
+            longPress = true;
+            ActivityCompat.requestPermissions(changeLayoutActivity, new String[]{Manifest.permission.RECORD_AUDIO}, ChangeLayoutActivity.REQUEST_RECORD_AUDIO_PERMISSION);
+            recorder = new MediaRecorder();
+            recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+            String dest_uri = new StringBuilder(UUID.randomUUID().toString()).append(".jpg").toString();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                File file = new File(changeLayoutActivity.getExternalFilesDir(Environment.DIRECTORY_RECORDINGS), dest_uri);
+                recorder.setOutputFile(file);
+                buttons.get(holder.getAdapterPosition()).setSpeak(Uri.fromFile(file).toString());
+            } else {
+                File file = new File(changeLayoutActivity.getExternalFilesDir(Environment.DIRECTORY_MUSIC), dest_uri);
+                recorder.setOutputFile(file);
+                buttons.get(holder.getAdapterPosition()).setSpeak(Uri.fromFile(file).toString());
+            }
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB);
+            try {
+                recorder.prepare();
+            } catch (IOException e) {
+                Log.e("create recorder", "prepare() failed");
+            }
+            recorder.start();
             return true;
         });
 
-//        holder.change_audio.onTouchEvent((MotionEvent event) -> {
-//           switch (event.getAction()){
-//               case MotionEvent.ACTION_DOWN:
-//
-//
-//           }
-//        });
+        holder.change_audio.setOnTouchListener(((view, motionEvent) -> {
+            view.onTouchEvent(motionEvent);
+            if (motionEvent.getAction() == MotionEvent.ACTION_UP && longPress) {
+                Log.e("long press status", "long press released");
+                recorder.stop();
+                recorder.release();
+                longPress = false;
+            }
+            return true;
+        }));
 
         holder.change_audio.setOnClickListener((View view) -> {
             //TODO only allows images, accommodate gif and videos also
@@ -145,7 +152,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             chooseAudio.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
             Intent record = new Intent(MediaStore.Audio.Media.RECORD_SOUND_ACTION);
-            ChangeLayoutActivity.temp_uri = changeLayoutActivity.getContentResolver().insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,new ContentValues());
+            ChangeLayoutActivity.temp_uri = changeLayoutActivity.getContentResolver().insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, new ContentValues());
 //            record.putExtra(MediaStore.EXTRA_OUTPUT,ChangeLayoutActivity.destination_uri);
             record.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
@@ -160,23 +167,22 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 
         holder.picture.setOnClickListener((View view) -> {
             //TODO only allows images, accommodate gif and videos also
-
             Intent chooseImage = new Intent();
             chooseImage.setAction(Intent.ACTION_PICK);
             chooseImage.setData(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
 
             Intent clickImage = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
             Intent recordVideo = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-            ChangeLayoutActivity.temp_uri = changeLayoutActivity.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,new ContentValues());
-            clickImage.putExtra(MediaStore.EXTRA_OUTPUT,ChangeLayoutActivity.temp_uri);
-            recordVideo.putExtra(MediaStore.EXTRA_OUTPUT,ChangeLayoutActivity.temp_uri);
+            ChangeLayoutActivity.temp_uri = changeLayoutActivity.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new ContentValues());
+            clickImage.putExtra(MediaStore.EXTRA_OUTPUT, ChangeLayoutActivity.temp_uri);
+            recordVideo.putExtra(MediaStore.EXTRA_OUTPUT, ChangeLayoutActivity.temp_uri);
 
             Intent chooseImgFile = new Intent();
             chooseImgFile.setType("image/*");
             chooseImgFile.setAction(Intent.ACTION_GET_CONTENT);
 
             Intent chooserIntent = Intent.createChooser(chooseImage, "Take or select image");
-            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{clickImage,recordVideo, chooseImgFile});
+            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{clickImage, recordVideo, chooseImgFile});
             ChangeLayoutActivity.pos = holder.getAdapterPosition();
 
             //images and video but cannot click using camera
@@ -189,18 +195,59 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         });
 
         holder.audio_control.setOnClickListener((View v) -> {
-            if(holder.speak != null)
-                //TODO update the seek bar
-                if(holder.speak.isPlaying()) {
+            try {
+                String speakUri = buttons.get(holder.getAdapterPosition()).getSpeak();
+                if (changeLayoutActivity.speak != null)
+                    changeLayoutActivity.speak.release();
+                changeLayoutActivity.speak = MediaPlayer.create(holder.audio_control.getContext(), Uri.parse(speakUri));
+//                changeLayoutActivity.speak.setVolume(1, 1);
+                changeLayoutActivity.speak.setOnCompletionListener((mediaPlayer -> {
+                    changeLayoutActivity.speak.release();
+                    holder.seekBar.setProgress(0);
+                }));
+
+                if (changeLayoutActivity.speak.isPlaying()) {
                     holder.audio_control.setImageResource(R.drawable.baseline_play_arrow_24);
-                    holder.speak.stop();
+                    //to resume use pause
+                    changeLayoutActivity.speak.pause();
+                    //to restart
+//                    speak.release();
+//                    holder.seekBar.setProgress(0);
                 } else {
                     holder.audio_control.setImageResource(R.drawable.baseline_pause_24);
+                    holder.seekBar.setMax(holder.speak.getDuration() / 100);
+                    Runnable updateSeekBar = () -> {
+                        holder.seekBar.setProgress(holder.speak.getCurrentPosition());
+                    };
+                    changeLayoutActivity.runOnUiThread(() -> {
+                        new Handler().postDelayed(updateSeekBar, 100);
+                    });
+
                     holder.speak.start();
                 }
-            else
-                Toast.makeText(holder.itemView.getContext(),"Audio not available for this button",Toast.LENGTH_SHORT)
+            } catch (SecurityException se) {
+                System.err.println("need uri permission at position " + position);
+            } catch (Exception e) {
+                Toast.makeText(holder.itemView.getContext(), "Audio not available for this button", Toast.LENGTH_SHORT)
                         .show();
+            }
+        });
+
+        holder.seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+//                holder.speak.seekTo(i);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
         });
     }
 
@@ -218,7 +265,6 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         ImageView change_audio;
         CardView picture;
         ImageView image;
-
         MediaPlayer speak;
 
         public ViewHolder(@NonNull View itemView) {

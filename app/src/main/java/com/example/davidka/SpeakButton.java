@@ -14,10 +14,7 @@ public class SpeakButton {
 
     public String speak;
     public String picture;
-    public String spokenText;
-
-    @Ignore
-    MediaPlayer audio;
+    public String spokenText="";
 
     public SpeakButton(int position){
         this.position = position;
@@ -25,10 +22,6 @@ public class SpeakButton {
 
     public int getPosition() {
         return position;
-    }
-
-    public void setPosition(int position) {
-        this.position = position;
     }
 
     public String getSpeak() {
@@ -53,13 +46,5 @@ public class SpeakButton {
 
     public void setSpokenText(String spokenText) {
         this.spokenText = spokenText;
-    }
-
-    public MediaPlayer getAudio() {
-        return audio;
-    }
-
-    public void setAudio(MediaPlayer audio) {
-        this.audio = audio;
     }
 }

@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -28,6 +29,7 @@ import java.util.UUID;
 public class ChangeLayoutActivity extends AppCompatActivity {
 
     static List<SpeakButton> buttons;
+    MediaPlayer speak;
     RecyclerView edit_grid;
     CardView add_picture;
 
@@ -51,7 +53,6 @@ public class ChangeLayoutActivity extends AppCompatActivity {
 //            } else {
 //                Log.d("choose intent", "no uri in data");
             } catch (Exception e) {
-                e.printStackTrace();
             }
             pos = -1;
         }
