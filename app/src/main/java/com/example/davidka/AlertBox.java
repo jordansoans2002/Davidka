@@ -3,6 +3,7 @@ package com.example.davidka;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.util.Log;
 import android.view.View;
 
 import java.util.List;
@@ -52,8 +53,10 @@ public class AlertBox {
                         activity.finish();
                         new Thread(() -> {
                             DatabaseHelper db = DatabaseHelper.getDB(activity);
-                            for(SpeakButton button:buttons)
+                            for(SpeakButton button:buttons) {
                                 db.speakButtonDao().updateSpeakButton(button);
+                                Log.d("table contents", button.position + ". text"+ button.getSpokenText()+ "image:" + button.picture + " speech:" + button.speak);
+                            }
                         }).start();
                     }
                 })

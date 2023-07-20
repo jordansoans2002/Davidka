@@ -1,6 +1,7 @@
 package com.example.davidka;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -12,6 +13,8 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -75,6 +78,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         return new ViewHolder(view);
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         holder.spoken_text.setText(ChangeLayoutActivity.buttons.get(position).getSpokenText());
@@ -87,23 +91,6 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         } catch (Exception e) {
 
         }
-
-        //TODO update the buttons text every time a key is pressed
-        holder.spoken_text.setOnKeyListener((view, keyCode, keyEvent) -> {
-            buttons.get(holder.getAdapterPosition()).setSpokenText(holder.spoken_text.getText().toString());
-            Log.e("spoken text update", buttons.get(holder.getAdapterPosition()).getSpokenText());
-            return true;
-        });
-//        holder.spoken_text.setOnEditorActionListener(((textView, actionId, keyEvent) -> {
-//            buttons.get(holder.getAdapterPosition()).setSpokenText(textView.getText().toString());
-//            Log.e("spoken text update",buttons.get(holder.getAdapterPosition()).getSpokenText());
-//            return true;
-//        }));
-
-        //update the text every time the keyboard is closed or the focus moves from the EditText
-//        holder.spoken_text.setOnFocusChangeListener((view, hasFocus) -> {
-//            if(hasFocus)
-//        });
 
         holder.change_audio.setOnLongClickListener((View view) -> {
             Log.e("long press status", "long click detected");
@@ -132,7 +119,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             return true;
         });
 
-        holder.change_audio.setOnTouchListener(((view, motionEvent) -> {
+        holder.change_audio.setOnTouchListener((@SuppressLint("ClickableViewAccessibility") View view, MotionEvent motionEvent) -> {
             view.onTouchEvent(motionEvent);
             if (motionEvent.getAction() == MotionEvent.ACTION_UP && longPress) {
                 Log.e("long press status", "long press released");
@@ -141,9 +128,11 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
                 longPress = false;
             }
             return true;
-        }));
+        });
 
         holder.change_audio.setOnClickListener((View view) -> {
+            Toast.makeText(holder.itemView.getContext(), "Press and hold to record", Toast.LENGTH_SHORT)
+                    .show();
             //TODO only allows images, accommodate gif and videos also
             Intent chooseAudio = new Intent();
             chooseAudio.setType("audio/*");
@@ -220,7 +209,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
                         holder.seekBar.setProgress(holder.speak.getCurrentPosition());
                     };
                     changeLayoutActivity.runOnUiThread(() -> {
-                        new Handler().postDelayed(updateSeekBar, 100);
+                        holder.seekBar.postDelayed(updateSeekBar, 100);
                     });
 
                     holder.speak.start();
@@ -236,7 +225,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         holder.seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-//                holder.speak.seekTo(i);
+                holder.speak.seekTo(i);
             }
 
             @Override
@@ -247,6 +236,22 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
 
+            }
+        });
+
+        holder.spoken_text.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                Log.e("spoken text update", holder.spoken_text.getText().toString());
+                buttons.get(holder.getAdapterPosition()).setSpokenText(holder.spoken_text.getText().toString());
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
             }
         });
     }

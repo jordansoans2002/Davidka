@@ -95,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         for (SpeakButton button : buttons)
-            Log.d("table contents", button.position + ". image:" + button.picture + " speech:" + button.speak);
+            Log.d("table contents", button.position + ". text"+ button.getSpokenText()+ "image:" + button.picture + " speech:" + button.speak);
 
         PictureGridAdapter adapter = new PictureGridAdapter(this, buttons);
         picture_grid.setAdapter(adapter);
@@ -111,7 +111,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
-        speak.release();
+        if(speak != null)
+            speak.release();
         if (id == R.id.edit_layout) {
             Intent intent = new Intent(this, ChangeLayoutActivity.class);
             this.startActivity(intent);

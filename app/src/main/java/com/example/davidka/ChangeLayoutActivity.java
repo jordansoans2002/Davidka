@@ -63,10 +63,13 @@ public class ChangeLayoutActivity extends AppCompatActivity {
             Intent intent = o.getData();
             try {
                 Uri uri = intent==null? temp_uri : intent.getData();
+                //if image crop it using
                 String dest_uri = new StringBuilder(UUID.randomUUID().toString()).append(".jpg").toString();
                 UCrop.of(uri, Uri.fromFile(new File(getFilesDir(), dest_uri)))
                         .withAspectRatio(1, 1)
                         .start(ChangeLayoutActivity.this);
+
+                //TODO if video cut it and convert to gif
             } catch (Exception e) {
                 e.printStackTrace();
             }

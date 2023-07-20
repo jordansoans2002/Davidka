@@ -57,6 +57,16 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/audio_control">
 
+            <VideoView
+                android:id="@+id/video"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_gravity="fill"
+                android:foreground="@drawable/baseline_add_a_photo_24"
+                android:foregroundGravity="center"
+                android:scaleType="centerInside"
+                android:visibility="gone" />
+
             <ImageView
                 android:id="@+id/image"
                 android:layout_width="match_parent"
@@ -66,6 +76,7 @@
                 android:foregroundGravity="center"
                 android:scaleType="centerInside"
                 app:srcCompat="@drawable/folded_hands" />
+
         </androidx.cardview.widget.CardView>
 
         <EditText

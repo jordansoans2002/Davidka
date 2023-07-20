@@ -9,6 +9,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.VideoView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -36,8 +37,17 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
     public void onBindViewHolder(@NonNull PictureGridAdapter.ViewHolder holder, int position) {
         try {
             String imgUri = buttons.get(position).getPicture();
-            if (imgUri != null)
-                holder.img.setImageURI(Uri.parse(imgUri));
+            if (imgUri != null) {
+                String ext = imgUri.substring(imgUri.lastIndexOf('.'));
+                if(ext.equalsIgnoreCase(".jpg")) {
+                    holder.img.setImageURI(Uri.parse(imgUri));
+                    holder.vid.setVisibility(View.GONE);
+                } else if(ext.equalsIgnoreCase(".gif")){
+                    //TODO prefer gif to video or seperate video into gif and audio
+                    holder.vid.setVideoURI(Uri.parse(imgUri));
+                    holder.img.setVisibility(View.GONE);
+                }
+            }
             holder.txt.setText(buttons.get(position).getSpokenText());
 
             holder.img.setOnClickListener((View view) -> {
@@ -66,11 +76,13 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
 
     public class ViewHolder extends RecyclerView.ViewHolder {
         ImageView img;
+        VideoView vid;
         TextView txt;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             img = itemView.findViewById(R.id.img);
+            vid = itemView.findViewById(R.id.vid);
             txt = itemView.findViewById(R.id.txt);
         }
     }
