@@ -15,7 +15,7 @@
             android:id="@+id/vid"
             android:layout_width="180dp"
             android:layout_height="180dp"
-            android:scaleType="fitCenter"
+            android:scaleType="centerCrop"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />

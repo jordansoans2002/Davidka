@@ -20,8 +20,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.Toast;
 
+import com.gowtham.library.utils.CompressOption;
 import com.gowtham.library.utils.TrimVideo;
 import com.yalantis.ucrop.UCrop;
 
@@ -66,22 +66,31 @@ public class ChangeLayoutActivity extends AppCompatActivity {
             Intent intent = o.getData();
 //            if (o.getResultCode() == RESULT_OK) {
             try {
+                SpeakButton button = buttons.get(pos);
                 Uri uri = intent == null ? temp_uri : intent.getData();
                 Log.e("return uri", uri.toString());
                 if (uri.toString().contains("image") || uri.toString().contains("jpg")) {
-                    Log.e("return uri", uri.toString());
                     //if image crop it using
-                    String dest_uri = new StringBuilder(UUID.randomUUID().toString()).append(".jpg").toString();
-                    UCrop.of(uri, Uri.fromFile(new File(getFilesDir(), dest_uri)))
+                    Uri dest_uri;
+                    if(button.getPicture()!=null && !button.isVideo)
+                        dest_uri = Uri.parse(button.getPicture());
+                    else{
+                        if(button.isVideo)
+                            new File(Uri.parse(button.getPicture()).getPath()).delete();
+                        dest_uri = Uri.fromFile(new File(getFilesDir(), new StringBuilder(UUID.randomUUID().toString()).append(".jpg").toString()));
+                    }
+
+                    Log.e("dest uri", dest_uri.toString());
+                    UCrop.of(uri, dest_uri)
                             .withAspectRatio(1, 1)
                             .start(ChangeLayoutActivity.this);
                 } else if (uri.toString().contains("video") || uri.toString().contains("mp4")) {//VID,Movies,mp4
-                    Log.e("return uri", uri.toString());
-//                    TrimVideo.activity(uri.toString())
-//                            .setHideSeekBar(true)
+
+                    TrimVideo.activity(uri.toString())
+                            .setHideSeekBar(true)
 //                            .setAccurateCut(true)
-//                            .start(ChangeLayoutActivity.this,trimVideo);
-                    SpeakButton button = buttons.get(pos);
+                            .setCompressOption(new CompressOption(30,"1M",180,180))
+                            .start(ChangeLayoutActivity.this,trimVideo);
                     button.setPicture(uri.toString(), true);
                     adapter.notifyItemChanged(pos);
                 }
@@ -113,7 +122,10 @@ public class ChangeLayoutActivity extends AppCompatActivity {
             result -> {
                 if(result.getResultCode() == RESULT_OK && result.getData() != null){
                     Uri uri = Uri.parse(TrimVideo.getTrimmedVideoPath(result.getData()));
+                    Log.e("dest uri", uri.toString());
                     SpeakButton button = buttons.get(pos);
+                    if(button.getPicture() != null)
+                        new File(Uri.parse(button.getPicture()).getPath()).delete();
                     button.setPicture(uri.toString(), true);
                     adapter.notifyItemChanged(pos);
                 }
