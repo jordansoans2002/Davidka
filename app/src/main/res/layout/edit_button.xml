@@ -22,6 +22,7 @@
             android:id="@+id/audio_control"
             android:layout_width="40dp"
             android:layout_height="40dp"
+            android:layout_marginStart="-8dp"
             android:layout_marginTop="8dp"
             app:layout_constraintStart_toStartOf="@+id/spoken_text"
             app:layout_constraintTop_toTopOf="parent"
@@ -38,14 +39,30 @@
             app:layout_constraintStart_toEndOf="@+id/audio_control"
             app:layout_constraintTop_toTopOf="@+id/audio_control" />
 
-        <ImageView
+        <Button
             android:id="@+id/change_audio"
             android:layout_width="40dp"
             android:layout_height="40dp"
+            android:layout_marginEnd="4dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:letterSpacing="0"
+            android:paddingLeft="8dp"
+            app:cornerRadius="40dp"
+            app:icon="@drawable/baseline_mic_24"
+            app:iconPadding="0dp"
             app:layout_constraintBottom_toBottomOf="@+id/seekBar"
             app:layout_constraintEnd_toEndOf="@+id/spoken_text"
-            app:layout_constraintTop_toTopOf="@+id/seekBar"
-            app:srcCompat="@drawable/baseline_mic_24" />
+            app:layout_constraintTop_toTopOf="@+id/seekBar" />
+
+<!--        <ImageView-->
+<!--            android:id="@+id/change_audio"-->
+<!--            android:layout_width="40dp"-->
+<!--            android:layout_height="40dp"-->
+<!--            app:layout_constraintBottom_toBottomOf="@+id/seekBar"-->
+<!--            app:layout_constraintEnd_toEndOf="@+id/spoken_text"-->
+<!--            app:layout_constraintTop_toTopOf="@+id/seekBar"-->
+<!--            app:srcCompat="@drawable/baseline_mic_24" />-->
 
         <androidx.cardview.widget.CardView
             android:id="@+id/picture"
@@ -64,8 +81,7 @@
                 android:layout_gravity="fill"
                 android:foreground="@drawable/baseline_add_a_photo_24"
                 android:foregroundGravity="center"
-                android:scaleType="centerInside"
-                android:visibility="gone" />
+                android:scaleType="centerInside" />
 
             <ImageView
                 android:id="@+id/image"
@@ -82,7 +98,7 @@
         <EditText
             android:id="@+id/spoken_text"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:ems="10"
             android:hint="Enter text to be spoken"

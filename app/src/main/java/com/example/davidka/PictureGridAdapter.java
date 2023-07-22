@@ -6,14 +6,17 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.io.IOException;
 import java.util.List;
 
 public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.ViewHolder> {
@@ -35,35 +38,45 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull PictureGridAdapter.ViewHolder holder, int position) {
+        SpeakButton button = buttons.get(holder.getAdapterPosition());
         try {
-            String imgUri = buttons.get(position).getPicture();
-            if (imgUri != null) {
-                String ext = imgUri.substring(imgUri.lastIndexOf('.'));
-                if(ext.equalsIgnoreCase(".jpg")) {
+            String imgUri = button.getPicture();
+            if(imgUri != null) {
+                if (!button.isVideo) {
                     holder.img.setImageURI(Uri.parse(imgUri));
                     holder.vid.setVisibility(View.GONE);
-                } else if(ext.equalsIgnoreCase(".gif")){
+                } else {
                     //TODO prefer gif to video or seperate video into gif and audio
                     holder.vid.setVideoURI(Uri.parse(imgUri));
                     holder.img.setVisibility(View.GONE);
                 }
             }
-            holder.txt.setText(buttons.get(position).getSpokenText());
 
-            holder.img.setOnClickListener((View view) -> {
-                String speakUri = buttons.get(holder.getAdapterPosition()).getSpeak();
-                if (speakUri != null) {
-                    if(mainActivity.speak != null)
-                        mainActivity.speak.release();
-                    mainActivity.speak = MediaPlayer.create(holder.img.getContext(), Uri.parse(speakUri));
-                    mainActivity.speak.setOnCompletionListener((mediaPlayer -> mediaPlayer.release()));
-                    mainActivity.speak.start();
-                } else
-                    Toast.makeText(holder.itemView.getContext(), "Audio not available for this button", Toast.LENGTH_SHORT)
-                            .show();
+            holder.txt.setText(button.getSpokenText());
+
+            holder.picture.setOnClickListener((View view) -> {
+                if (!buttons.get(holder.getAdapterPosition()).isVideo) {
+                    String speakUri = button.getSpeak();
+                    if (speakUri != null) {
+                        if (mainActivity.speak != null)
+                            mainActivity.speak.release();
+                        mainActivity.speak = MediaPlayer.create(holder.img.getContext(), Uri.parse(speakUri));
+                        mainActivity.speak.setOnCompletionListener((MediaPlayer::release));
+                        mainActivity.speak.start();
+                    } else
+                        Toast.makeText(holder.itemView.getContext(), "Audio not available for this button", Toast.LENGTH_SHORT)
+                                .show();
+                } else {
+                    Log.e("video","video playing");
+                    if (holder.vid.isPlaying())
+                        holder.vid.seekTo(0);
+                    holder.vid.start();
+                }
             });
         } catch (SecurityException se) {
             System.err.println("need uri permission at position " + position);
+        } catch (Exception e){
+            System.err.println("some error");
         }
     }
 
@@ -75,12 +88,14 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
+        CardView picture;
         ImageView img;
         VideoView vid;
         TextView txt;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
+            picture = itemView.findViewById(R.id.picture);
             img = itemView.findViewById(R.id.img);
             vid = itemView.findViewById(R.id.vid);
             txt = itemView.findViewById(R.id.txt);

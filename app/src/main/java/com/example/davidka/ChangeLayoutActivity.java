@@ -13,13 +13,16 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
+import com.gowtham.library.utils.TrimVideo;
 import com.yalantis.ucrop.UCrop;
 
 import java.io.File;
@@ -61,18 +64,31 @@ public class ChangeLayoutActivity extends AppCompatActivity {
         @Override
         public void onActivityResult(ActivityResult o) {
             Intent intent = o.getData();
+//            if (o.getResultCode() == RESULT_OK) {
             try {
-                Uri uri = intent==null? temp_uri : intent.getData();
-                //if image crop it using
-                String dest_uri = new StringBuilder(UUID.randomUUID().toString()).append(".jpg").toString();
-                UCrop.of(uri, Uri.fromFile(new File(getFilesDir(), dest_uri)))
-                        .withAspectRatio(1, 1)
-                        .start(ChangeLayoutActivity.this);
-
-                //TODO if video cut it and convert to gif
+                Uri uri = intent == null ? temp_uri : intent.getData();
+                Log.e("return uri", uri.toString());
+                if (uri.toString().contains("image") || uri.toString().contains("jpg")) {
+                    Log.e("return uri", uri.toString());
+                    //if image crop it using
+                    String dest_uri = new StringBuilder(UUID.randomUUID().toString()).append(".jpg").toString();
+                    UCrop.of(uri, Uri.fromFile(new File(getFilesDir(), dest_uri)))
+                            .withAspectRatio(1, 1)
+                            .start(ChangeLayoutActivity.this);
+                } else if (uri.toString().contains("video") || uri.toString().contains("mp4")) {//VID,Movies,mp4
+                    Log.e("return uri", uri.toString());
+//                    TrimVideo.activity(uri.toString())
+//                            .setHideSeekBar(true)
+//                            .setAccurateCut(true)
+//                            .start(ChangeLayoutActivity.this,trimVideo);
+                    SpeakButton button = buttons.get(pos);
+                    button.setPicture(uri.toString(), true);
+                    adapter.notifyItemChanged(pos);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
+//            }
         }
     });
 
@@ -92,13 +108,26 @@ public class ChangeLayoutActivity extends AppCompatActivity {
             });
 
 
+    ActivityResultLauncher<Intent> trimVideo = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if(result.getResultCode() == RESULT_OK && result.getData() != null){
+                    Uri uri = Uri.parse(TrimVideo.getTrimmedVideoPath(result.getData()));
+                    SpeakButton button = buttons.get(pos);
+                    button.setPicture(uri.toString(), true);
+                    adapter.notifyItemChanged(pos);
+                }
+            }
+    );
+
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK && requestCode == UCrop.REQUEST_CROP) {
             final Uri resultUri = UCrop.getOutput(data);
             SpeakButton button = buttons.get(pos);
-            button.setPicture(resultUri.toString());
+            button.setPicture(resultUri.toString(), false);
             adapter.notifyItemChanged(pos);
         } else if (resultCode == UCrop.RESULT_ERROR) {
             final Throwable cropError = UCrop.getError(data);
@@ -108,12 +137,12 @@ public class ChangeLayoutActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode){
+        switch (requestCode) {
             case REQUEST_RECORD_AUDIO_PERMISSION:
-                permissionToRecordAccepted  = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                permissionToRecordAccepted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
                 break;
         }
-        if (!permissionToRecordAccepted ) finish();
+        if (!permissionToRecordAccepted) finish();
 
     }
 
@@ -139,7 +168,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        switch(item.getItemId()) {
+        switch (item.getItemId()) {
             case R.id.save_changes:
                 AlertBox keepChanges = new AlertBox(
                         this,
