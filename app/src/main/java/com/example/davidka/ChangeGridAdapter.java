@@ -4,20 +4,16 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.Looper;
 import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -37,33 +33,39 @@ import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.yalantis.ucrop.UCrop;
-
 import java.io.File;
 import java.io.IOException;
-import java.util.Base64;
-import java.util.List;
-import java.util.Timer;
 import java.util.UUID;
 
 public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.ViewHolder> {
     ChangeLayoutActivity changeLayoutActivity;
-    List<SpeakButton> buttons;
+//    List<SpeakButton> changeLayoutActivitybuttons;
     MediaPlayer speak;
     MediaRecorder recorder;
     Boolean longPress = false;
+
+    VideoView videoView;
+    SeekBar seekBar;
+    Handler updateVideoHandler = new Handler();
+    Runnable updateVideo = () -> {
+        updateVideoHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                long currentPosition = videoView.getCurrentPosition();
+                seekBar.setProgress((int) currentPosition);
+                updateVideoHandler.postDelayed(this, 100);
+            }
+        }, 100);
+    };
 
     ActivityResultLauncher<PickVisualMediaRequest> getImage;
     ActivityResultLauncher<Intent> pickAudio;
     ActivityResultLauncher<Intent> pickImage;
 
-    public ChangeGridAdapter(ChangeLayoutActivity changeLayoutActivity, ActivityResultLauncher<Intent> pickAudio, ActivityResultLauncher<Intent> pickImage, List<SpeakButton> buttons) {
+    public ChangeGridAdapter(ChangeLayoutActivity changeLayoutActivity, ActivityResultLauncher<Intent> pickAudio, ActivityResultLauncher<Intent> pickImage) {
         this.changeLayoutActivity = changeLayoutActivity;
         this.pickAudio = pickAudio;
         this.pickImage = pickImage;
-        this.buttons = buttons;
-        for (SpeakButton button : buttons)
-            Log.d("table contents", button.position + ". image:" + button.getPicture() + " speech:" + button.getSpeak());
         this.getImage = changeLayoutActivity.registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
             if (uri != null) {
                 Log.d("PhotoPicker", "Selected URI: " + uri);
@@ -85,8 +87,14 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        SpeakButton button = buttons.get(holder.getAdapterPosition());
-        holder.spoken_text.setText(button.getSpokenText());
+        videoView = holder.video;
+        seekBar = holder.seekBar;
+
+        SpeakButton button = changeLayoutActivity.buttons.get(holder.getAdapterPosition());
+        if(changeLayoutActivity.preferences.getBoolean("showText",false))
+            holder.spoken_text.setText(button.getSpokenText());
+        else
+            holder.spoken_text.setVisibility(View.GONE);
         try {
             Uri image = Uri.parse(button.getPicture());
             if (image != null && !button.isVideo) {
@@ -96,6 +104,13 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             } else if (image != null && button.isVideo) {
                 holder.video.setVisibility(View.VISIBLE);
                 holder.video.setVideoURI(image);
+                holder.video.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                    @Override
+                    public void onCompletion(MediaPlayer mediaPlayer) {
+                        holder.video.seekTo(0);
+                        holder.audio_control.setImageResource(R.drawable.baseline_play_arrow_24);
+                    }
+                });
                 holder.image.setVisibility(View.GONE);
             }
         } catch (SecurityException e) {
@@ -105,7 +120,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         }
 
         holder.change_audio.setOnLongClickListener((View view) -> {
-            if (buttons.get(holder.getAdapterPosition()).isVideo) {
+            if (changeLayoutActivity.buttons.get(holder.getAdapterPosition()).isVideo) {
                 Toast.makeText(holder.itemView.getContext(), "Please choose an image to add audio", Toast.LENGTH_SHORT)
                         .show();
             } else {
@@ -121,11 +136,11 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     File file = new File(changeLayoutActivity.getExternalFilesDir(Environment.DIRECTORY_RECORDINGS), dest_uri);
                     recorder.setOutputFile(file);
-                    buttons.get(holder.getAdapterPosition()).setSpeak(Uri.fromFile(file).toString());
+                    changeLayoutActivity.buttons.get(holder.getAdapterPosition()).setSpeak(Uri.fromFile(file).toString());
                 } else {
                     File file = new File(changeLayoutActivity.getExternalFilesDir(Environment.DIRECTORY_MUSIC), dest_uri);
                     recorder.setOutputFile(file);
-                    buttons.get(holder.getAdapterPosition()).setSpeak(Uri.fromFile(file).toString());
+                    changeLayoutActivity.buttons.get(holder.getAdapterPosition()).setSpeak(Uri.fromFile(file).toString());
                 }
                 recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB);
                 try {
@@ -152,7 +167,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         });
 
         holder.change_audio.setOnClickListener((View view) -> {
-            if (buttons.get(holder.getAdapterPosition()).isVideo) {
+            if (changeLayoutActivity.buttons.get(holder.getAdapterPosition()).isVideo) {
                 Toast.makeText(holder.itemView.getContext(), "Please choose an image to add audio", Toast.LENGTH_SHORT)
                         .show();
             } else
@@ -180,26 +195,26 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         });
 
         holder.picture.setOnClickListener((View view) -> {
-            Toast.makeText(holder.picture.getContext(), "Long press to take a video", Toast.LENGTH_SHORT)
-                    .show();
-
-            Intent clickImage = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            ChangeLayoutActivity.temp_uri = changeLayoutActivity.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new ContentValues());
-            clickImage.putExtra(MediaStore.EXTRA_OUTPUT, ChangeLayoutActivity.temp_uri);
-
-            Intent chooseImage = new Intent();
-            chooseImage.setAction(Intent.ACTION_PICK);
-//            chooseImage.setData(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-            chooseImage.setType("image/*,video/*");
-//            chooseImage.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/*","video/*"});
-
-            Intent chooseImgFile = new Intent();
-            chooseImgFile.setType("*/*");
-            chooseImgFile.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/*", "video/*"});
-            chooseImgFile.setAction(Intent.ACTION_GET_CONTENT);
-
-            Intent chooserIntent = Intent.createChooser(chooseImage, "Take or select image");
-            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{clickImage, chooseImgFile});
+//            Toast.makeText(holder.picture.getContext(), "Long press to take a video", Toast.LENGTH_SHORT)
+//                    .show();
+//
+//            Intent clickImage = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+//            ChangeLayoutActivity.temp_uri = changeLayoutActivity.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new ContentValues());
+//            clickImage.putExtra(MediaStore.EXTRA_OUTPUT, ChangeLayoutActivity.temp_uri);
+//
+//            Intent chooseImage = new Intent();
+//            chooseImage.setAction(Intent.ACTION_PICK);
+////            chooseImage.setData(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+//            chooseImage.setType("image/*,video/*");
+////            chooseImage.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/*","video/*"});
+//
+//            Intent chooseImgFile = new Intent();
+//            chooseImgFile.setType("*/*");
+//            chooseImgFile.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/*", "video/*"});
+//            chooseImgFile.setAction(Intent.ACTION_GET_CONTENT);
+//
+//            Intent chooserIntent = Intent.createChooser(chooseImage, "Take or select image");
+//            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{clickImage, chooseImgFile});
             ChangeLayoutActivity.pos = holder.getAdapterPosition();
 
             //images and video but cannot click using camera
@@ -207,36 +222,36 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 //                    .setMediaType(ActivityResultContracts.PickVisualMedia.ImageAndVideo.INSTANCE)
 //                    .build());
 
-            pickImage.launch(chooserIntent);
+            pickImage.launch(createIntent());
         });
 
-        holder.picture.setOnLongClickListener((view) -> {
-            Intent recordVideo = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-            ChangeLayoutActivity.temp_uri = changeLayoutActivity.getContentResolver().insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, new ContentValues());
-            recordVideo.putExtra(MediaStore.EXTRA_OUTPUT, ChangeLayoutActivity.temp_uri);
-
-            Intent chooseImage = new Intent();
-            chooseImage.setAction(Intent.ACTION_PICK);
-//            chooseImage.setData(MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
-            chooseImage.setType("video/*");
-//            chooseImage.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/*","video/*"});
-
-            Intent chooseImgFile = new Intent();
-            chooseImgFile.setType("video/*");
-            chooseImgFile.setAction(Intent.ACTION_GET_CONTENT);
-
-            Intent chooserIntent = Intent.createChooser(chooseImage, "Take or select image");
-            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{recordVideo, chooseImgFile});
-            ChangeLayoutActivity.pos = holder.getAdapterPosition();
-
-            pickImage.launch(chooserIntent);
-            return true;
-        });
+//        holder.picture.setOnLongClickListener((view) -> {
+//            Intent recordVideo = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+//            ChangeLayoutActivity.temp_uri = changeLayoutActivity.getContentResolver().insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, new ContentValues());
+//            recordVideo.putExtra(MediaStore.EXTRA_OUTPUT, ChangeLayoutActivity.temp_uri);
+//
+//            Intent chooseImage = new Intent();
+//            chooseImage.setAction(Intent.ACTION_PICK);
+////            chooseImage.setData(MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
+//            chooseImage.setType("video/*");
+////            chooseImage.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/*","video/*"});
+//
+//            Intent chooseImgFile = new Intent();
+//            chooseImgFile.setType("video/*");
+//            chooseImgFile.setAction(Intent.ACTION_GET_CONTENT);
+//
+//            Intent chooserIntent = Intent.createChooser(chooseImage, "Take or select image");
+//            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{recordVideo, chooseImgFile});
+//            ChangeLayoutActivity.pos = holder.getAdapterPosition();
+//
+//            pickImage.launch(chooserIntent);
+//            return true;
+//        });
 
         holder.audio_control.setOnClickListener((View v) -> {
             try {
-                if (!buttons.get(holder.getAdapterPosition()).isVideo) {
-                    String speakUri = buttons.get(holder.getAdapterPosition()).getSpeak();
+                if (!changeLayoutActivity.buttons.get(holder.getAdapterPosition()).isVideo) {
+                    String speakUri = changeLayoutActivity.buttons.get(holder.getAdapterPosition()).getSpeak();
                     if (changeLayoutActivity.speak != null)
                         changeLayoutActivity.speak.release();
                     changeLayoutActivity.speak = MediaPlayer.create(holder.audio_control.getContext(), Uri.parse(speakUri));
@@ -254,20 +269,20 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 //                    holder.seekBar.setProgress(0);
                     } else {
                         holder.audio_control.setImageResource(R.drawable.baseline_pause_24);
-                        holder.seekBar.setMax(holder.speak.getDuration() / 100);
-//                    new Timer().scheduleAtFixedRate(()->{
-//                        holder.seekBar.setProgress(holder.speak.getCurrentPosition());
-//                    },0,100);
-                        Runnable updateSeekBar = () -> {
-                            holder.seekBar.setProgress(holder.speak.getCurrentPosition());
-                        };
-                        changeLayoutActivity.runOnUiThread(() -> {
-                            holder.seekBar.postDelayed(updateSeekBar, 100);
-                        });
+//                        holder.seekBar.setMax(holder.speak.getDuration() / 100);
+////                    new Timer().scheduleAtFixedRate(()->{
+////                        holder.seekBar.setProgress(holder.speak.getCurrentPosition());
+////                    },0,100);
+//                        Runnable updateSeekBar = () -> {
+//                            holder.seekBar.setProgress(holder.speak.getCurrentPosition());
+//                        };
+//                        changeLayoutActivity.runOnUiThread(() -> {
+//                            holder.seekBar.postDelayed(updateSeekBar, 100);
+//                        });
 
                         holder.speak.start();
                     }
-                } else if (buttons.get(holder.getAdapterPosition()).isVideo) {
+                } else if (changeLayoutActivity.buttons.get(holder.getAdapterPosition()).isVideo) {
                     if (holder.video.isPlaying()) {
                         holder.audio_control.setImageResource(R.drawable.baseline_play_arrow_24);
                         //to resume use pause
@@ -289,6 +304,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
                         });
 
                         holder.video.start();
+
                     }
                 }
             } catch (SecurityException se) {
@@ -299,10 +315,19 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             }
         });
 
+        holder.video.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            @Override
+            public void onPrepared(MediaPlayer mediaPlayer) {
+                holder.seekBar.setProgress(0);
+                holder.seekBar.setMax(holder.video.getDuration());
+                updateVideoHandler.postDelayed(updateVideo, 100);
+            }
+        });
         holder.seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                if (holder.speak != null)
+//                if (holder.speak != null)
+                if (holder.speak != null && b)
                     holder.speak.seekTo(i);
             }
 
@@ -324,7 +349,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                buttons.get(holder.getAdapterPosition()).setSpokenText(holder.spoken_text.getText().toString());
+                changeLayoutActivity.buttons.get(holder.getAdapterPosition()).setSpokenText(holder.spoken_text.getText().toString());
             }
 
             @Override
@@ -338,6 +363,48 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         //TODO make the list dynamic
         // when scroll is disabled only 1st 8 will be shown on home page
         return 8;
+    }
+
+    Intent createIntent(){
+        Intent clickImage = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        ChangeLayoutActivity.temp_uri = changeLayoutActivity.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new ContentValues());
+        clickImage.putExtra(MediaStore.EXTRA_OUTPUT, ChangeLayoutActivity.temp_uri);
+
+        Intent chooseImage = new Intent();
+        chooseImage.setAction(Intent.ACTION_PICK);
+//            chooseImage.setData(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        chooseImage.setType("image/*");
+//            chooseImage.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/*","video/*"});
+
+        Intent chooseImgFile = new Intent();
+        chooseImgFile.setType("image/*");
+        chooseImgFile.setAction(Intent.ACTION_GET_CONTENT);
+
+        Intent imgChooserIntent = Intent.createChooser(chooseImage, "Take or select image");
+        imgChooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{clickImage, chooseImgFile});
+
+
+        Intent recordVideo = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+        ChangeLayoutActivity.temp_uri = changeLayoutActivity.getContentResolver().insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, new ContentValues());
+        recordVideo.putExtra(MediaStore.EXTRA_OUTPUT, ChangeLayoutActivity.temp_uri);
+
+        Intent chooseVideo = new Intent();
+        chooseImage.setAction(Intent.ACTION_PICK);
+//            chooseImage.setData(MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
+        chooseImage.setType("video/*");
+//            chooseImage.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/*","video/*"});
+
+        Intent chooseVidFile = new Intent();
+        chooseImgFile.setType("video/*");
+        chooseImgFile.setAction(Intent.ACTION_GET_CONTENT);
+
+        Intent vidChooserIntent = Intent.createChooser(chooseVideo, "Take or select video");
+        vidChooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{recordVideo, chooseVidFile});
+
+        Intent chooserIntent = Intent.createChooser(imgChooserIntent,"Insert image or video");
+        chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{vidChooserIntent});
+
+        return chooserIntent;
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {

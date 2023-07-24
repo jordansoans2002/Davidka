@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <SwitchPreference android:title="Start up sound"
+        android:summary="Play sound at start up"
+        android:key="startupSound"
+        android:defaultValue="true" />
+    <SeekBarPreference android:title="Set app volume"
+        android:summary="Set volume for the app, volume to return to its original value when you leave the app"
+        android:defaultValue="100"
+        android:key="appVolume" />
+    <SwitchPreference android:title="Show text"
+        android:summary="Show text under each button"
+        android:key="buttonText"
+        android:defaultValue="false" />
+    <SwitchPreference android:title="Enable scrolling"
+        android:summary="If disabled only first 8 buttons will be visible"
+        android:key="scrollable"
+        android:defaultValue="false" />
+</PreferenceScreen>

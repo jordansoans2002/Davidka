@@ -14,6 +14,7 @@ import android.widget.VideoView;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.IOException;
@@ -22,6 +23,8 @@ import java.util.List;
 public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.ViewHolder> {
     MainActivity mainActivity;
     List<SpeakButton> buttons;
+
+    int vidPlaying=-1;
 
     PictureGridAdapter(MainActivity mainActivity, List<SpeakButton> buttons) {
         this.mainActivity = mainActivity;
@@ -41,18 +44,21 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
         SpeakButton button = buttons.get(holder.getAdapterPosition());
         try {
             String imgUri = button.getPicture();
-            if(imgUri != null) {
+            if (imgUri != null) {
                 if (!button.isVideo) {
                     holder.img.setImageURI(Uri.parse(imgUri));
                     holder.vid.setVisibility(View.GONE);
                 } else {
-                    //TODO prefer gif to video or seperate video into gif and audio
                     holder.vid.setVideoURI(Uri.parse(imgUri));
+                    holder.vid.setOnCompletionListener((mediaPlayer -> holder.vid.seekTo(0)));
                     holder.img.setVisibility(View.GONE);
                 }
             }
 
-            holder.txt.setText(button.getSpokenText());
+            if (mainActivity.preferences.getBoolean("showText", false))
+                holder.txt.setText(button.getSpokenText());
+            else
+                holder.txt.setVisibility(View.GONE);
 
             holder.picture.setOnClickListener((View view) -> {
                 if (!buttons.get(holder.getAdapterPosition()).isVideo) {
@@ -67,24 +73,29 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
                         Toast.makeText(holder.itemView.getContext(), "Audio not available for this button", Toast.LENGTH_SHORT)
                                 .show();
                 } else {
-                    Log.e("video","video playing");
-                    if (holder.vid.isPlaying())
+                    Log.e("video status", String.valueOf(holder.vid.isPlaying()));
+                    if (holder.vid.isPlaying()) {
+                        holder.vid.pause();
+                    } else {
                         holder.vid.seekTo(0);
-                    holder.vid.start();
+                        holder.vid.start();
+                    }
                 }
             });
         } catch (SecurityException se) {
             System.err.println("need uri permission at position " + position);
-        } catch (Exception e){
+        } catch (Exception e) {
             System.err.println("some error");
         }
     }
 
     @Override
     public int getItemCount() {
-        //show only the first 8 items if scrolling is disabled
-        //you can have as many images in edit view but only the first 8 will be shown
-        return 8;
+        if (mainActivity.preferences.getBoolean("scrollable", false))
+            //you can have as many buttons in edit view but only the first 8 will be shown
+            return 8;
+        else
+            return buttons.size();
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {

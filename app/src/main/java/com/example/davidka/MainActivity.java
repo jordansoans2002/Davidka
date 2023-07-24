@@ -6,13 +6,13 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
+import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.Manifest;
 import android.content.Intent;
-import android.content.pm.PackageManager;
+import android.content.SharedPreferences;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.util.Log;
@@ -26,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
 
     List<SpeakButton> buttons = new ArrayList<>();
     RecyclerView picture_grid;
+    SharedPreferences preferences;
     MediaPlayer speak;
 
     @Override
@@ -33,39 +34,15 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         picture_grid = findViewById(R.id.picture_grid);
-//        PictureGridAdapter adapter = new PictureGridAdapter(this,buttons);
-//        picture_grid.setAdapter(adapter);
-//        picture_grid.setLayoutManager(new GridLayoutManager(this,2));
-//        picture_grid.canScrollVertically(View.);
 
+        preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        Log.e("pref", preferences.getAll().toString());
 
-//        MediaPlayer startup = MediaPlayer.create(this, R.raw.davidka);
-//        startup.start();
-
-//        MediaPlayer sorry = MediaPlayer.create(this,R.raw.sorry);
-//        MediaPlayer thank_you = MediaPlayer.create(this,R.raw.thank_you);
-//        MediaPlayer yes = MediaPlayer.create(this,R.raw.yes);
-
-//        findViewById(R.id.grid_1).setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                yes.start();
-//            }
-//        });
-//        findViewById(R.id.grid_3).setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                sorry.start();
-//            }
-//        });
-//        findViewById(R.id.grid_4).setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                thank_you.start();
-//            }
-//        });
-
-
+        if (preferences.getBoolean("startupSound", false)) {
+            MediaPlayer startup = MediaPlayer.create(this, R.raw.davidka);
+            startup.start();
+            startup.setOnCompletionListener((mediaPlayer) -> startup.release());
+        }
     }
 
     ActivityResultLauncher<Intent> getPermission = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
@@ -73,13 +50,20 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onActivityResult(ActivityResult o) {
                     if (o.getResultCode() == RESULT_OK)
-                        Log.e("permision result", "can use");
+                        Log.e("permission result", "can use");
                 }
             });
 
     @Override
     protected void onResume() {
         super.onResume();
+
+        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        int originalVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        preferences.edit().putInt("originalVolume",originalVol).apply();
+        int maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        float prefVol = preferences.getInt("appVolume",100)/100f;
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (prefVol*maxVol),0);
 
         //TODO check and get all required permissions here
 
@@ -95,11 +79,19 @@ public class MainActivity extends AppCompatActivity {
         }
 
         for (SpeakButton button : buttons)
-            Log.d("table contents", button.position + ". vid? "+ button.isVideo+ " image:" + button.picture + " speech:" + button.speak);
+            Log.d("table contents", button.position + ". vid? " + button.isVideo + " image:" + button.picture + " speech:" + button.speak);
 
         PictureGridAdapter adapter = new PictureGridAdapter(this, buttons);
         picture_grid.setAdapter(adapter);
         picture_grid.setLayoutManager(new GridLayoutManager(this, 2));
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        int originalVol = preferences.getInt("originalVolume",50);
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, originalVol,0);
     }
 
     @Override
@@ -111,16 +103,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
-        if(speak != null)
+        if (speak != null)
             speak.release();
         if (id == R.id.edit_layout) {
             Intent intent = new Intent(this, ChangeLayoutActivity.class);
             this.startActivity(intent);
         } else if (id == R.id.change_settings) {
-            Intent intent = new Intent(this, ChangeLayoutActivity.class);
+            Intent intent = new Intent(this, SettingsActivity.class);
             this.startActivity(intent);
         }
-
         return super.onOptionsItemSelected(item);
     }
 }

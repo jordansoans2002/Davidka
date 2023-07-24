@@ -8,10 +8,13 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
+import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.media.MediaPlayer;
@@ -26,12 +29,13 @@ import com.gowtham.library.utils.TrimVideo;
 import com.yalantis.ucrop.UCrop;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 public class ChangeLayoutActivity extends AppCompatActivity {
 
-    static List<SpeakButton> buttons;
+    List<SpeakButton> buttons;
     MediaPlayer speak;
     RecyclerView edit_grid;
     CardView add_picture;
@@ -41,6 +45,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
     private boolean permissionToRecordAccepted = false;
     static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     ChangeGridAdapter adapter;
+    SharedPreferences preferences;
 
 
     ActivityResultLauncher<Intent> pickAudio = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<ActivityResult>() {
@@ -89,7 +94,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                     TrimVideo.activity(uri.toString())
                             .setHideSeekBar(true)
 //                            .setAccurateCut(true)
-                            .setCompressOption(new CompressOption(30,"1M",180,180))
+                            .setCompressOption(new CompressOption(30,"1M",1280,1280))
                             .start(ChangeLayoutActivity.this,trimVideo);
                     button.setPicture(uri.toString(), true);
                     adapter.notifyItemChanged(pos);
@@ -162,14 +167,19 @@ public class ChangeLayoutActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_layout);
+        preferences = PreferenceManager.getDefaultSharedPreferences(this);
+
         edit_grid = findViewById(R.id.edit_grid);
         add_picture = findViewById(R.id.add_picture);
         DatabaseHelper db = DatabaseHelper.getDB(this);
         buttons = db.speakButtonDao().getAllButtons();
 
-        adapter = new ChangeGridAdapter(this, pickAudio, pickImage, buttons);
+        adapter = new ChangeGridAdapter(this, pickAudio, pickImage);
         edit_grid.setAdapter(adapter);
         edit_grid.setLayoutManager(new GridLayoutManager(this, 2));
+
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleCallback);
+        itemTouchHelper.attachToRecyclerView(edit_grid);
     }
 
     @Override
@@ -200,4 +210,20 @@ public class ChangeLayoutActivity extends AppCompatActivity {
         }
     }
 
+    ItemTouchHelper.SimpleCallback simpleCallback = new ItemTouchHelper.SimpleCallback(ItemTouchHelper.DOWN | ItemTouchHelper.UP | ItemTouchHelper.START | ItemTouchHelper.END, 0) {
+        @Override
+        public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+            int fromPosition = viewHolder.getAbsoluteAdapterPosition();
+            int toPosition = target.getAbsoluteAdapterPosition();
+
+            Collections.swap(buttons, fromPosition, toPosition);
+            adapter.notifyItemMoved(fromPosition, toPosition);
+            return false;
+        }
+
+        @Override
+        public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+        }
+
+    };
 }
