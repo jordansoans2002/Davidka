@@ -47,15 +47,13 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
     VideoView videoView;
     SeekBar seekBar;
     Handler updateVideoHandler = new Handler();
-    Runnable updateVideo = () -> {
-        updateVideoHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                long currentPosition = videoView.getCurrentPosition();
-                seekBar.setProgress((int) currentPosition);
-                updateVideoHandler.postDelayed(this, 100);
-            }
-        }, 100);
+    Runnable updateVideo = new Runnable() {
+        @Override
+        public void run() {
+            long currentPosition = videoView.getCurrentPosition();
+            seekBar.setProgress((int) currentPosition);
+            updateVideoHandler.postDelayed(this, 100);
+        }
     };
 
     ActivityResultLauncher<PickVisualMediaRequest> getImage;
@@ -195,26 +193,26 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         });
 
         holder.picture.setOnClickListener((View view) -> {
-//            Toast.makeText(holder.picture.getContext(), "Long press to take a video", Toast.LENGTH_SHORT)
-//                    .show();
-//
-//            Intent clickImage = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-//            ChangeLayoutActivity.temp_uri = changeLayoutActivity.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new ContentValues());
-//            clickImage.putExtra(MediaStore.EXTRA_OUTPUT, ChangeLayoutActivity.temp_uri);
-//
-//            Intent chooseImage = new Intent();
-//            chooseImage.setAction(Intent.ACTION_PICK);
-////            chooseImage.setData(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-//            chooseImage.setType("image/*,video/*");
-////            chooseImage.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/*","video/*"});
-//
-//            Intent chooseImgFile = new Intent();
-//            chooseImgFile.setType("*/*");
-//            chooseImgFile.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/*", "video/*"});
-//            chooseImgFile.setAction(Intent.ACTION_GET_CONTENT);
-//
-//            Intent chooserIntent = Intent.createChooser(chooseImage, "Take or select image");
-//            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{clickImage, chooseImgFile});
+            Toast.makeText(holder.picture.getContext(), "Long press to take a video", Toast.LENGTH_SHORT)
+                    .show();
+
+            Intent clickImage = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            ChangeLayoutActivity.temp_uri = changeLayoutActivity.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new ContentValues());
+            clickImage.putExtra(MediaStore.EXTRA_OUTPUT, ChangeLayoutActivity.temp_uri);
+
+            Intent chooseImage = new Intent();
+            chooseImage.setAction(Intent.ACTION_PICK);
+//            chooseImage.setData(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            chooseImage.setType("image/*,video/*");
+//            chooseImage.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/*","video/*"});
+
+            Intent chooseImgFile = new Intent();
+            chooseImgFile.setType("*/*");
+            chooseImgFile.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/*", "video/*"});
+            chooseImgFile.setAction(Intent.ACTION_GET_CONTENT);
+
+            Intent chooserIntent = Intent.createChooser(chooseImage, "Take or select image");
+            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{clickImage, chooseImgFile});
             ChangeLayoutActivity.pos = holder.getAdapterPosition();
 
             //images and video but cannot click using camera
@@ -222,31 +220,32 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 //                    .setMediaType(ActivityResultContracts.PickVisualMedia.ImageAndVideo.INSTANCE)
 //                    .build());
 
-            pickImage.launch(createIntent());
+            pickImage.launch(chooserIntent);
         });
 
-//        holder.picture.setOnLongClickListener((view) -> {
-//            Intent recordVideo = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+        holder.picture.setOnLongClickListener((view) -> {
+            Intent recordVideo = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
 //            ChangeLayoutActivity.temp_uri = changeLayoutActivity.getContentResolver().insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, new ContentValues());
 //            recordVideo.putExtra(MediaStore.EXTRA_OUTPUT, ChangeLayoutActivity.temp_uri);
-//
-//            Intent chooseImage = new Intent();
-//            chooseImage.setAction(Intent.ACTION_PICK);
-////            chooseImage.setData(MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
-//            chooseImage.setType("video/*");
-////            chooseImage.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/*","video/*"});
-//
-//            Intent chooseImgFile = new Intent();
-//            chooseImgFile.setType("video/*");
-//            chooseImgFile.setAction(Intent.ACTION_GET_CONTENT);
-//
-//            Intent chooserIntent = Intent.createChooser(chooseImage, "Take or select image");
-//            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{recordVideo, chooseImgFile});
-//            ChangeLayoutActivity.pos = holder.getAdapterPosition();
-//
-//            pickImage.launch(chooserIntent);
-//            return true;
-//        });
+
+            Intent chooseImage = new Intent();
+            chooseImage.setAction(Intent.ACTION_PICK);
+//            chooseImage.setData(MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
+            chooseImage.setType("video/*");
+//            chooseImage.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/*","video/*"});
+
+            Intent chooseImgFile = new Intent();
+            chooseImgFile.setType("video/*");
+            chooseImgFile.setAction(Intent.ACTION_GET_CONTENT);
+
+            Intent chooserIntent = Intent.createChooser(chooseImage, "Take or select image");
+            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{recordVideo, chooseImgFile});
+            ChangeLayoutActivity.pos = holder.getAdapterPosition();
+
+            //ceates fatal exception if no image selected
+            pickImage.launch(chooserIntent);
+            return true;
+        });
 
         holder.audio_control.setOnClickListener((View v) -> {
             try {
@@ -292,16 +291,16 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 //                    holder.seekBar.setProgress(0);
                     } else {
                         holder.audio_control.setImageResource(R.drawable.baseline_pause_24);
-                        holder.seekBar.setMax(holder.video.getDuration() / 100);
+//                        holder.seekBar.setMax(holder.video.getDuration() / 100);
 //                    new Timer().scheduleAtFixedRate(()->{
 //                        holder.seekBar.setProgress(holder.speak.getCurrentPosition());
 //                    },0,100);
-                        Runnable updateSeekBar = () -> {
-                            holder.seekBar.setProgress(holder.video.getCurrentPosition());
-                        };
-                        changeLayoutActivity.runOnUiThread(() -> {
-                            holder.seekBar.postDelayed(updateSeekBar, 100);
-                        });
+//                        Runnable updateSeekBar = () -> {
+//                            holder.seekBar.setProgress(holder.video.getCurrentPosition());
+//                        };
+//                        changeLayoutActivity.runOnUiThread(() -> {
+//                            holder.seekBar.postDelayed(updateSeekBar, 100);
+//                        });
 
                         holder.video.start();
 
@@ -329,6 +328,8 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 //                if (holder.speak != null)
                 if (holder.speak != null && b)
                     holder.speak.seekTo(i);
+                else if(holder.video != null && b)
+                    holder.video.seekTo(i);
             }
 
             @Override
@@ -360,11 +361,10 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 
     @Override
     public int getItemCount() {
-        //TODO make the list dynamic
-        // when scroll is disabled only 1st 8 will be shown on home page
-        return 8;
+        return changeLayoutActivity.buttons.size();
     }
 
+    //trying to nest intents
     Intent createIntent(){
         Intent clickImage = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         ChangeLayoutActivity.temp_uri = changeLayoutActivity.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new ContentValues());

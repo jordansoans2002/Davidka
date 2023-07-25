@@ -12,12 +12,12 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginBottom="6dp"
-        app:layout_constraintBottom_toTopOf="@+id/add_picture"
+        app:layout_constraintBottom_toTopOf="@+id/add_button"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.cardview.widget.CardView
-        android:id="@+id/add_picture"
+        android:id="@+id/add_button"
         android:layout_width="0dp"
         android:layout_height="36dp"
         app:layout_constraintBottom_toBottomOf="parent"

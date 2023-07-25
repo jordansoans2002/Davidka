@@ -93,9 +93,9 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
     public int getItemCount() {
         if (mainActivity.preferences.getBoolean("scrollable", false))
             //you can have as many buttons in edit view but only the first 8 will be shown
-            return 8;
-        else
             return buttons.size();
+        else
+            return 8;
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {

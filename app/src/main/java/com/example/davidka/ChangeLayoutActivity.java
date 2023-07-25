@@ -16,20 +16,19 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.DragEvent;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 
-import com.gowtham.library.utils.CompressOption;
 import com.gowtham.library.utils.TrimVideo;
 import com.yalantis.ucrop.UCrop;
 
 import java.io.File;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,7 +37,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
     List<SpeakButton> buttons;
     MediaPlayer speak;
     RecyclerView edit_grid;
-    CardView add_picture;
+    CardView add_button;
 
     static int pos = -1;
     static Uri temp_uri = null;
@@ -93,8 +92,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
 
                     TrimVideo.activity(uri.toString())
                             .setHideSeekBar(true)
-//                            .setAccurateCut(true)
-                            .setCompressOption(new CompressOption(30,"1M",1280,1280))
+                            .setAccurateCut(true)
                             .start(ChangeLayoutActivity.this,trimVideo);
                     button.setPicture(uri.toString(), true);
                     adapter.notifyItemChanged(pos);
@@ -170,7 +168,12 @@ public class ChangeLayoutActivity extends AppCompatActivity {
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         edit_grid = findViewById(R.id.edit_grid);
-        add_picture = findViewById(R.id.add_picture);
+        add_button = findViewById(R.id.add_button);
+        if(preferences.getBoolean("scrollable",false))
+            add_button.setVisibility(View.VISIBLE);
+        else
+            add_button.setVisibility(View.GONE);
+
         DatabaseHelper db = DatabaseHelper.getDB(this);
         buttons = db.speakButtonDao().getAllButtons();
 
@@ -180,6 +183,12 @@ public class ChangeLayoutActivity extends AppCompatActivity {
 
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleCallback);
         itemTouchHelper.attachToRecyclerView(edit_grid);
+
+        add_button.setOnClickListener((view) -> {
+            buttons.add(new SpeakButton(buttons.size()));
+            adapter.notifyItemInserted(buttons.size()-1);
+        });
+//        add_button.setOnDragListener(drag);
     }
 
     @Override
@@ -216,7 +225,11 @@ public class ChangeLayoutActivity extends AppCompatActivity {
             int fromPosition = viewHolder.getAbsoluteAdapterPosition();
             int toPosition = target.getAbsoluteAdapterPosition();
 
-            Collections.swap(buttons, fromPosition, toPosition);
+            SpeakButton btn = new SpeakButton(-1);
+            btn.swap(buttons.get(fromPosition));
+            buttons.get(fromPosition).swap(buttons.get(toPosition));
+            buttons.get(toPosition).swap(btn);
+
             adapter.notifyItemMoved(fromPosition, toPosition);
             return false;
         }
@@ -226,4 +239,9 @@ public class ChangeLayoutActivity extends AppCompatActivity {
         }
 
     };
+
+    //TODO add on drag listener to add_button
+    //if buttons more than 8 and button is dragged the hold over add_button to delete
+//    View.OnDragListener drag = (View.OnDragListener) (view, dragEvent) -> {
+//    };
 }

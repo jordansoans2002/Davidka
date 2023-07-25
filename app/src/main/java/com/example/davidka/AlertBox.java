@@ -53,6 +53,8 @@ public class AlertBox {
                         activity.finish();
                         new Thread(() -> {
                             DatabaseHelper db = DatabaseHelper.getDB(activity);
+                            //TODO when a new button is added we need to add it to database not update
+                            //count database  and update till there rest add
                             for(SpeakButton button:buttons) {
                                 db.speakButtonDao().updateSpeakButton(button);
                                 Log.d("table contents", button.position + ". text"+ button.getSpokenText()+ "image:" + button.picture + " speech:" + button.speak);

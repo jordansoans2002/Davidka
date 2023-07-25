@@ -51,4 +51,10 @@ public class SpeakButton {
     public void setSpokenText(String spokenText) {
         this.spokenText = spokenText;
     }
+
+    public void swap(SpeakButton temp){
+        setSpeak(temp.getSpeak());
+        setPicture(temp.getPicture(),temp.isVideo);
+        setSpokenText(temp.getSpokenText());
+    }
 }
