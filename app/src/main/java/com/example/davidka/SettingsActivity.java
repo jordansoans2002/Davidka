@@ -20,31 +20,4 @@ public class SettingsActivity extends AppCompatActivity {
         SettingsFragment settingsFragment = new SettingsFragment();
         getSupportFragmentManager().beginTransaction().replace(R.id.settings_frame,settingsFragment).commit();
     }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.edit_action_bar, menu);
-        return super.onCreateOptionsMenu(menu);
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.save_changes:
-                AlertBox keepChanges = new AlertBox(
-                        this,
-                        "Keep changes",
-                        "Apply changes to settings?");
-                return true;
-            case R.id.cancel_changes:
-                AlertBox discardChanges = new AlertBox(
-                        this,
-                        "Discard changes",
-                        "Discard changes made to settings?");
-                discardChanges.createAlertBox();
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
-    }
 }

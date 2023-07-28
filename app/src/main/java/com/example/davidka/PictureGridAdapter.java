@@ -46,13 +46,19 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
             String imgUri = button.getPicture();
             if (imgUri != null) {
                 if (!button.isVideo) {
+                    holder.img.setVisibility(View.VISIBLE);
                     holder.img.setImageURI(Uri.parse(imgUri));
                     holder.vid.setVisibility(View.GONE);
                 } else {
+                    holder.vid.setVisibility(View.VISIBLE);
                     holder.vid.setVideoURI(Uri.parse(imgUri));
+                    holder.vid.seekTo(1);
                     holder.vid.setOnCompletionListener((mediaPlayer -> holder.vid.seekTo(0)));
                     holder.img.setVisibility(View.GONE);
                 }
+            } else {
+                if(!mainActivity.preferences.getBoolean("blankButton",false))
+                    holder.img.setImageResource(R.mipmap.ic_launcher);
             }
 
             if (mainActivity.preferences.getBoolean("showText", false))
@@ -77,7 +83,7 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
                     if (holder.vid.isPlaying()) {
                         holder.vid.pause();
                     } else {
-                        holder.vid.seekTo(0);
+                        holder.vid.seekTo(1);
                         holder.vid.start();
                     }
                 }

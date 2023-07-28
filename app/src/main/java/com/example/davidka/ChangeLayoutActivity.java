@@ -189,6 +189,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
             adapter.notifyItemInserted(buttons.size()-1);
         });
 //        add_button.setOnDragListener(drag);
+
     }
 
     @Override
@@ -217,6 +218,15 @@ public class ChangeLayoutActivity extends AppCompatActivity {
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        AlertBox discardChanges = new AlertBox(
+                adapter.changeLayoutActivity,
+                "Discard changes",
+                "Discard changes made to all buttons?");
+        discardChanges.createAlertBox();
     }
 
     ItemTouchHelper.SimpleCallback simpleCallback = new ItemTouchHelper.SimpleCallback(ItemTouchHelper.DOWN | ItemTouchHelper.UP | ItemTouchHelper.START | ItemTouchHelper.END, 0) {
