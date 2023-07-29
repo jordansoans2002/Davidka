@@ -1,10 +1,13 @@
 package com.example.davidka;
 
 import android.media.MediaPlayer;
+import android.net.Uri;
 
 import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
+
+import java.io.File;
 
 @Entity
 public class SpeakButton {
@@ -40,6 +43,8 @@ public class SpeakButton {
     }
 
     public void setPicture(String picture, Boolean isVideo) {
+//        if(this.picture != null)
+//            delete(this.picture);
         this.picture = picture;
         this.isVideo = isVideo;
     }
@@ -56,5 +61,9 @@ public class SpeakButton {
         setSpeak(temp.getSpeak());
         setPicture(temp.getPicture(),temp.isVideo);
         setSpokenText(temp.getSpokenText());
+    }
+
+    public void delete(String uri){
+        new File(Uri.parse(uri).getPath()).delete();
     }
 }

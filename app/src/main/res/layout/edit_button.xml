@@ -2,9 +2,11 @@
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/editor_button"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:layout_margin="4dp">
+    android:layout_margin="4dp"
+    android:longClickable="true">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="170dp"
@@ -95,40 +97,40 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
-            <ImageView
-                android:id="@+id/image"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="centerInside"
-                android:foreground="@drawable/baseline_add_a_photo_24"
-                android:foregroundGravity="center"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                <ImageView
+                    android:id="@+id/image"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:foreground="@drawable/baseline_add_a_photo_24"
+                    android:foregroundGravity="center"
+                    android:scaleType="centerInside"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
             </androidx.constraintlayout.widget.ConstraintLayout>
 
-<!--            <VideoView-->
-<!--                android:id="@+id/video"-->
-<!--                android:layout_width="match_parent"-->
-<!--                android:layout_height="match_parent"-->
-<!--                android:layout_alignParentStart="true"-->
-<!--                android:layout_alignParentTop="true"-->
-<!--                android:layout_alignParentEnd="true"-->
-<!--                android:layout_alignParentBottom="true"-->
-<!--                android:layout_gravity="fill"-->
-<!--                android:foreground="@drawable/baseline_add_a_photo_24"-->
-<!--                android:foregroundGravity="center"-->
-<!--                android:scaleType="centerInside" />-->
+            <!--            <VideoView-->
+            <!--                android:id="@+id/video"-->
+            <!--                android:layout_width="match_parent"-->
+            <!--                android:layout_height="match_parent"-->
+            <!--                android:layout_alignParentStart="true"-->
+            <!--                android:layout_alignParentTop="true"-->
+            <!--                android:layout_alignParentEnd="true"-->
+            <!--                android:layout_alignParentBottom="true"-->
+            <!--                android:layout_gravity="fill"-->
+            <!--                android:foreground="@drawable/baseline_add_a_photo_24"-->
+            <!--                android:foregroundGravity="center"-->
+            <!--                android:scaleType="centerInside" />-->
 
-<!--            <ImageView-->
-<!--                android:id="@+id/image"-->
-<!--                android:layout_width="match_parent"-->
-<!--                android:layout_height="match_parent"-->
-<!--                android:layout_gravity="fill"-->
-<!--                android:foreground="@drawable/baseline_add_a_photo_24"-->
-<!--                android:foregroundGravity="center"-->
-<!--                android:scaleType="centerInside"-->
-<!--                app:srcCompat="@drawable/folded_hands" />-->
+            <!--            <ImageView-->
+            <!--                android:id="@+id/image"-->
+            <!--                android:layout_width="match_parent"-->
+            <!--                android:layout_height="match_parent"-->
+            <!--                android:layout_gravity="fill"-->
+            <!--                android:foreground="@drawable/baseline_add_a_photo_24"-->
+            <!--                android:foregroundGravity="center"-->
+            <!--                android:scaleType="centerInside"-->
+            <!--                app:srcCompat="@drawable/folded_hands" />-->
 
         </androidx.cardview.widget.CardView>
 

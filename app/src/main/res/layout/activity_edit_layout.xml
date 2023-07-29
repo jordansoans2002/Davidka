@@ -25,6 +25,7 @@
         app:layout_constraintStart_toStartOf="parent">
 
         <ImageView
+            android:id="@+id/add_button_image"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             app:srcCompat="@drawable/baseline_add_24" />

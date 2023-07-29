@@ -19,7 +19,7 @@
         android:key="blankButton" />
     <SwitchPreference android:title="Show text"
         android:summary="Show text under each button"
-        android:key="buttonText"
+        android:key="showText"
         android:defaultValue="false" />
     <SwitchPreference android:title="Enable scrolling"
         android:summary="If disabled only first 8 buttons will be visible"

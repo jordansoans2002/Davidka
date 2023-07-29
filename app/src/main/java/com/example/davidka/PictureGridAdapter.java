@@ -24,7 +24,7 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
     MainActivity mainActivity;
     List<SpeakButton> buttons;
 
-    int vidPlaying=-1;
+    int vidPlaying = -1;
 
     PictureGridAdapter(MainActivity mainActivity, List<SpeakButton> buttons) {
         this.mainActivity = mainActivity;
@@ -41,58 +41,65 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull PictureGridAdapter.ViewHolder holder, int position) {
-        SpeakButton button = buttons.get(holder.getAdapterPosition());
-        try {
-            String imgUri = button.getPicture();
-            if (imgUri != null) {
-                if (!button.isVideo) {
-                    holder.img.setVisibility(View.VISIBLE);
-                    holder.img.setImageURI(Uri.parse(imgUri));
-                    holder.vid.setVisibility(View.GONE);
-                } else {
-                    holder.vid.setVisibility(View.VISIBLE);
-                    holder.vid.setVideoURI(Uri.parse(imgUri));
-                    holder.vid.seekTo(1);
-                    holder.vid.setOnCompletionListener((mediaPlayer -> holder.vid.seekTo(0)));
-                    holder.img.setVisibility(View.GONE);
-                }
+        SpeakButton button = buttons.get(holder.getAbsoluteAdapterPosition());
+        String imgUri = button.getPicture();
+        if (imgUri != null) {
+            if (!button.isVideo) {
+                holder.img.setVisibility(View.VISIBLE);
+                holder.img.setImageURI(Uri.parse(imgUri));
+                holder.vid.setVisibility(View.GONE);
             } else {
-                if(!mainActivity.preferences.getBoolean("blankButton",false))
-                    holder.img.setImageResource(R.mipmap.ic_launcher);
+                holder.vid.setVisibility(View.VISIBLE);
+                holder.vid.setVideoURI(Uri.parse(imgUri));
+                holder.vid.seekTo(1);
+                holder.vid.setOnCompletionListener((mediaPlayer -> holder.vid.seekTo(1)));
+                holder.img.setVisibility(View.GONE);
             }
+        } else {
+            if (!mainActivity.preferences.getBoolean("blankButton", false))
+                holder.img.setImageResource(R.mipmap.ic_launcher);
+        }
 
-            if (mainActivity.preferences.getBoolean("showText", false))
-                holder.txt.setText(button.getSpokenText());
-            else
-                holder.txt.setVisibility(View.GONE);
+        if (mainActivity.preferences.getBoolean("showText", false)) {
+            holder.txt.setText(button.getSpokenText());
+            holder.txt.setVisibility(View.VISIBLE);
+        }else
+            holder.txt.setVisibility(View.GONE);
 
-            holder.picture.setOnClickListener((View view) -> {
-                if (!buttons.get(holder.getAdapterPosition()).isVideo) {
-                    String speakUri = button.getSpeak();
-                    if (speakUri != null) {
-                        if (mainActivity.speak != null)
-                            mainActivity.speak.release();
-                        mainActivity.speak = MediaPlayer.create(holder.img.getContext(), Uri.parse(speakUri));
-                        mainActivity.speak.setOnCompletionListener((MediaPlayer::release));
-                        mainActivity.speak.start();
-                    } else
-                        Toast.makeText(holder.itemView.getContext(), "Audio not available for this button", Toast.LENGTH_SHORT)
-                                .show();
-                } else {
-                    Log.e("video status", String.valueOf(holder.vid.isPlaying()));
-                    if (holder.vid.isPlaying()) {
-                        holder.vid.pause();
-                    } else {
-                        holder.vid.seekTo(1);
+        holder.picture.setOnClickListener((View view) -> {
+            if (!buttons.get(holder.getAbsoluteAdapterPosition()).isVideo) {
+                String speakUri = button.getSpeak();
+
+                if(mainActivity.video != null && mainActivity.video.isPlaying()){
+                    mainActivity.video.seekTo(1);
+                    mainActivity.video.pause();
+                }
+                if (speakUri != null) {
+                    if (mainActivity.speak != null)
+                        mainActivity.speak.release();
+                    mainActivity.speak = MediaPlayer.create(holder.img.getContext(), Uri.parse(speakUri));
+                    mainActivity.speak.setOnCompletionListener((MediaPlayer::release));
+                    mainActivity.speak.start();
+                } else
+                    Toast.makeText(holder.itemView.getContext(), "Audio not available for this button", Toast.LENGTH_SHORT)
+                            .show();
+            } else {
+                if(mainActivity.speak != null)
+                    mainActivity.speak.release();
+
+                if(mainActivity.video == null || !mainActivity.video.isPlaying()){
+                    mainActivity.video = holder.vid;
+                    holder.vid.start();
+                }else {
+                    mainActivity.video.pause();
+                    mainActivity.video.seekTo(1);
+                    if(mainActivity.video != holder.vid){
+                        mainActivity.video = holder.vid;
                         holder.vid.start();
                     }
                 }
-            });
-        } catch (SecurityException se) {
-            System.err.println("need uri permission at position " + position);
-        } catch (Exception e) {
-            System.err.println("some error");
-        }
+            }
+        });
     }
 
     @Override

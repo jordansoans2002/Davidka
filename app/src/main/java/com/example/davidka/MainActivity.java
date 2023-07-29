@@ -6,28 +6,39 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.VideoView;
 
+import java.io.File;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
+    static final int REQUEST_READ_EXT_STORAGE = 200;
+    private boolean permissionToReadAccepted = false;
+    static final int REQUEST_RECORD_AUDIO_PERMISSION = 201;
+    private boolean permissionToRecordAccepted = false;
     List<SpeakButton> buttons = new ArrayList<>();
     RecyclerView picture_grid;
     SharedPreferences preferences;
     MediaPlayer speak;
+    VideoView video;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,11 +49,12 @@ public class MainActivity extends AppCompatActivity {
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
         Log.e("pref", preferences.getAll().toString());
 
-        if (preferences.getBoolean("startupSound", false)) {
-            MediaPlayer startup = MediaPlayer.create(this, R.raw.davidka);
-            startup.start();
-            startup.setOnCompletionListener((mediaPlayer) -> startup.release());
-        }
+        //preferences are loaded after onResume
+//        if (preferences.getBoolean("startupSound", false)) {
+//            MediaPlayer startup = MediaPlayer.create(this, R.raw.startup_sound_davidka);
+//            startup.start();
+//            startup.setOnCompletionListener((mediaPlayer) -> startup.release());
+//        }
     }
 
     ActivityResultLauncher<Intent> getPermission = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
@@ -55,15 +67,47 @@ public class MainActivity extends AppCompatActivity {
             });
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case REQUEST_READ_EXT_STORAGE:
+                permissionToReadAccepted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                preferences.edit().putBoolean("addVideo",true);
+                break;
+            case REQUEST_RECORD_AUDIO_PERMISSION:
+                permissionToRecordAccepted = grantResults[1] == PackageManager.PERMISSION_GRANTED;
+                preferences.edit().putBoolean("addAudio",true).apply();
+                break;
+        }
+        if (!permissionToRecordAccepted)
+            preferences.edit().putBoolean("addAudio",false).apply();
+
+        if(!permissionToReadAccepted)
+            preferences.edit().putBoolean("addVideo",false).apply();
+
+    }
+
+
+    @Override
     protected void onResume() {
         super.onResume();
 
-        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
-        int originalVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-        preferences.edit().putInt("originalVolume",originalVol).apply();
-        int maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-        float prefVol = preferences.getInt("appVolume",100)/100f;
-        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (prefVol*maxVol),0);
+//        ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO}, ChangeLayoutActivity.REQUEST_RECORD_AUDIO_PERMISSION);
+
+        if(preferences.getBoolean("appVolume",false)) {
+            AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+            int originalVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+            preferences.edit().putInt("originalVolume", originalVol).apply();
+            int maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+            float prefVol = preferences.getInt("volumeSetting", 100) / 100f;
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (prefVol * maxVol), 0);
+        }
+
+        if (preferences.getBoolean("startupSound", false)) {
+//            MediaPlayer startup = MediaPlayer.create(this, R.raw.startup_sound_davidka);
+//            startup.start();
+//            startup.setOnCompletionListener((mediaPlayer) -> startup.release());
+        }
 
         //TODO check and get all required permissions here
 
@@ -89,9 +133,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
-        int originalVol = preferences.getInt("originalVolume",50);
-        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, originalVol,0);
+
+        if(preferences.getBoolean("appVolume",false)) {
+            AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+            int originalVol = preferences.getInt("originalVolume", 50);
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, originalVol, 0);
+        }
     }
 
     @Override

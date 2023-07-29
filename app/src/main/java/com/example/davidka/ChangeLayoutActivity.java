@@ -8,15 +8,17 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
+import androidx.core.app.ActivityCompat;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.media.MediaPlayer;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -24,6 +26,7 @@ import android.view.DragEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageView;
 
 import com.gowtham.library.utils.TrimVideo;
 import com.yalantis.ucrop.UCrop;
@@ -35,9 +38,9 @@ import java.util.UUID;
 public class ChangeLayoutActivity extends AppCompatActivity {
 
     List<SpeakButton> buttons;
-    MediaPlayer speak;
     RecyclerView edit_grid;
     CardView add_button;
+    ImageView add_button_image;
 
     static int pos = -1;
     static Uri temp_uri = null;
@@ -69,36 +72,27 @@ public class ChangeLayoutActivity extends AppCompatActivity {
         public void onActivityResult(ActivityResult o) {
             Intent intent = o.getData();
 //            if (o.getResultCode() == RESULT_OK) {
-            try {
-                SpeakButton button = buttons.get(pos);
-                Uri uri = intent == null ? temp_uri : intent.getData();
-                Log.e("return uri", uri.toString());
-                if (uri.toString().contains("image") || uri.toString().contains("jpg")) {
-                    //if image crop it using
-                    Uri dest_uri;
-                    if(button.getPicture()!=null && !button.isVideo)
-                        dest_uri = Uri.parse(button.getPicture());
-                    else{
-                        if(button.isVideo)
-                            new File(Uri.parse(button.getPicture()).getPath()).delete();
-                        dest_uri = Uri.fromFile(new File(getFilesDir(), new StringBuilder(UUID.randomUUID().toString()).append(".jpg").toString()));
-                    }
+            SpeakButton button = buttons.get(pos);
+            Uri uri = intent == null ? temp_uri : intent.getData();
+            Log.e("return uri", uri.toString());
+            if (uri.toString().contains("image") || uri.toString().contains("jpg")) {
+//                    if (button.isVideo)
+//                        deleteFile(button.getPicture());
+                Uri dest_uri = Uri.fromFile(new File(getFilesDir(), new StringBuilder(UUID.randomUUID().toString()).append(".jpg").toString()));
 
-                    Log.e("dest uri", dest_uri.toString());
-                    UCrop.of(uri, dest_uri)
-                            .withAspectRatio(1, 1)
-                            .start(ChangeLayoutActivity.this);
-                } else if (uri.toString().contains("video") || uri.toString().contains("mp4")) {//VID,Movies,mp4
 
-                    TrimVideo.activity(uri.toString())
-                            .setHideSeekBar(true)
-                            .setAccurateCut(true)
-                            .start(ChangeLayoutActivity.this,trimVideo);
-                    button.setPicture(uri.toString(), true);
-                    adapter.notifyItemChanged(pos);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+                Log.e("dest uri", dest_uri.toString());
+                UCrop.of(uri, dest_uri)
+                        .withAspectRatio(1, 1)
+                        .start(ChangeLayoutActivity.this);
+            } else if (uri.toString().contains("video") || uri.toString().contains("mp4")) {//VID,Movies,mp4
+
+                TrimVideo.activity(uri.toString())
+                        .setHideSeekBar(true)
+                        .setAccurateCut(true)
+                        .start(ChangeLayoutActivity.this, trimVideo);
+                button.setPicture(uri.toString(), true);
+                adapter.notifyItemChanged(pos);
             }
 //            }
         }
@@ -123,12 +117,10 @@ public class ChangeLayoutActivity extends AppCompatActivity {
     ActivityResultLauncher<Intent> trimVideo = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
-                if(result.getResultCode() == RESULT_OK && result.getData() != null){
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     Uri uri = Uri.parse(TrimVideo.getTrimmedVideoPath(result.getData()));
                     Log.e("dest uri", uri.toString());
                     SpeakButton button = buttons.get(pos);
-                    if(button.getPicture() != null)
-                        new File(Uri.parse(button.getPicture()).getPath()).delete();
                     button.setPicture(uri.toString(), true);
                     adapter.notifyItemChanged(pos);
                 }
@@ -165,14 +157,12 @@ public class ChangeLayoutActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_layout);
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO}, ChangeLayoutActivity.REQUEST_RECORD_AUDIO_PERMISSION);
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         edit_grid = findViewById(R.id.edit_grid);
         add_button = findViewById(R.id.add_button);
-        if(preferences.getBoolean("scrollable",false))
-            add_button.setVisibility(View.VISIBLE);
-        else
-            add_button.setVisibility(View.GONE);
+        add_button_image = findViewById(R.id.add_button_image);
 
         DatabaseHelper db = DatabaseHelper.getDB(this);
         buttons = db.speakButtonDao().getAllButtons();
@@ -181,15 +171,62 @@ public class ChangeLayoutActivity extends AppCompatActivity {
         edit_grid.setAdapter(adapter);
         edit_grid.setLayoutManager(new GridLayoutManager(this, 2));
 
+        //doesnt allow the mic button to detect long press release
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleCallback);
-        itemTouchHelper.attachToRecyclerView(edit_grid);
+//        itemTouchHelper.attachToRecyclerView(edit_grid);
 
         add_button.setOnClickListener((view) -> {
             buttons.add(new SpeakButton(buttons.size()));
-            adapter.notifyItemInserted(buttons.size()-1);
-        });
-//        add_button.setOnDragListener(drag);
+            adapter.notifyItemInserted(buttons.size() - 1);
 
+            new Thread(() -> {
+                db.speakButtonDao().addSpeakButton(buttons.get(buttons.size() - 1));
+            }).start();
+        });
+        add_button_image.setOnDragListener(new View.OnDragListener() {
+            @Override
+            public boolean onDrag(View view, DragEvent dragEvent) {
+                Log.e("drag to delete", "drag detected in activity");
+                switch (dragEvent.getAction()) {
+                    case DragEvent.ACTION_DRAG_STARTED:
+                        add_button_image.setImageResource(R.drawable.baseline_delete_24);
+                        add_button_image.setBackgroundColor(Color.RED);
+                        return true;
+
+                    case DragEvent.ACTION_DRAG_ENTERED:
+                        add_button.setScaleX(1.2f);
+                        add_button.setScaleY(1.2f);
+                        return true;
+
+                    case DragEvent.ACTION_DRAG_EXITED:
+                        add_button.setScaleX(1f);
+                        add_button.setScaleY(1f);
+                        return true;
+
+                    case DragEvent.ACTION_DROP:
+                        String title, msg;
+                        if (buttons.size() >= 8) {
+                            title = "Delete button";
+                            msg = "Are you sure you want to delete this button?";
+                        } else {
+                            title = "Clear button";
+                            msg = "Are you sure you want to remove all media from this button?";
+                        }
+
+                        AlertBox removeButton = new AlertBox(ChangeLayoutActivity.this, title, msg);
+                        removeButton.deleteButton(buttons, pos);
+                        return true;
+
+                    case DragEvent.ACTION_DRAG_ENDED:
+                        add_button_image.setImageResource(R.drawable.baseline_add_24);
+                        add_button_image.setBackgroundColor(Color.WHITE);
+                        return true;
+
+                    default:
+                        return false;
+                }
+            }
+        });
     }
 
     @Override
@@ -206,14 +243,14 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                         this,
                         "Keep changes",
                         "Save changes made to all buttons?");
-                keepChanges.createAlertBox(buttons);
+                keepChanges.confirmGridChanges(buttons);
                 return true;
             case R.id.cancel_changes:
                 AlertBox discardChanges = new AlertBox(
                         adapter.changeLayoutActivity,
                         "Discard changes",
                         "Discard changes made to all buttons?");
-                discardChanges.createAlertBox();
+                discardChanges.discardGridChanges();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -226,21 +263,24 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 adapter.changeLayoutActivity,
                 "Discard changes",
                 "Discard changes made to all buttons?");
-        discardChanges.createAlertBox();
+        discardChanges.discardGridChanges();
     }
 
+    //TODO causes the record button to not detect the finger up
     ItemTouchHelper.SimpleCallback simpleCallback = new ItemTouchHelper.SimpleCallback(ItemTouchHelper.DOWN | ItemTouchHelper.UP | ItemTouchHelper.START | ItemTouchHelper.END, 0) {
         @Override
         public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
-            int fromPosition = viewHolder.getAbsoluteAdapterPosition();
-            int toPosition = target.getAbsoluteAdapterPosition();
+            if (!ChangeGridAdapter.longPress) {
+                int fromPosition = viewHolder.getAbsoluteAdapterPosition();
+                int toPosition = target.getAbsoluteAdapterPosition();
 
-            SpeakButton btn = new SpeakButton(-1);
-            btn.swap(buttons.get(fromPosition));
-            buttons.get(fromPosition).swap(buttons.get(toPosition));
-            buttons.get(toPosition).swap(btn);
+                SpeakButton btn = new SpeakButton(-1);
+                btn.swap(buttons.get(fromPosition));
+                buttons.get(fromPosition).swap(buttons.get(toPosition));
+                buttons.get(toPosition).swap(btn);
 
-            adapter.notifyItemMoved(fromPosition, toPosition);
+                adapter.notifyItemMoved(fromPosition, toPosition);
+            }
             return false;
         }
 
@@ -252,6 +292,45 @@ public class ChangeLayoutActivity extends AppCompatActivity {
 
     //TODO add on drag listener to add_button
     //if buttons more than 8 and button is dragged the hold over add_button to delete
-//    View.OnDragListener drag = (View.OnDragListener) (view, dragEvent) -> {
-//    };
+    View.OnDragListener deleteButton = (View.OnDragListener) (view, dragEvent) -> {
+        Log.e("drag to delete", "drag detected in activity");
+        switch (dragEvent.getAction()) {
+            case DragEvent.ACTION_DRAG_STARTED:
+                add_button_image.setImageResource(R.drawable.baseline_delete_24);
+                add_button_image.setBackgroundColor(Color.RED);
+                return true;
+
+            case DragEvent.ACTION_DRAG_ENTERED:
+                add_button.setScaleX(1.2f);
+                add_button.setScaleY(1.2f);
+                return true;
+
+            case DragEvent.ACTION_DRAG_EXITED:
+                add_button.setScaleX(1f);
+                add_button.setScaleY(1f);
+                return true;
+
+            case DragEvent.ACTION_DROP:
+                String title, msg;
+                if (buttons.size() >= 8) {
+                    title = "Delete button";
+                    msg = "Are you sure you want to delete this button?";
+                } else {
+                    title = "Clear button";
+                    msg = "Are you sure you want to remove all media from this button?";
+                }
+
+                AlertBox removeButton = new AlertBox(this, title, msg);
+                removeButton.deleteButton(buttons, pos);
+                return true;
+
+            case DragEvent.ACTION_DRAG_ENDED:
+                add_button_image.setImageResource(R.drawable.baseline_add_24);
+                add_button_image.setBackgroundColor(Color.WHITE);
+                return true;
+
+            default:
+                return false;
+        }
+    };
 }
