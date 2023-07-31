@@ -31,7 +31,7 @@ public class AlertBox {
     }
 
     //to confirm that user wants to discard changes
-    public void discardGridChanges() {
+    public void discardGridChanges(List<ButtonUpdate> updates) {
         AlertDialog.Builder dialog = new AlertDialog.Builder(activity);
         //Setting message manually and performing action on button click can set text from string.xml also
         dialog.setMessage(msg).setTitle(title)
@@ -39,6 +39,13 @@ public class AlertBox {
                 .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         activity.finish();
+                        new Thread(() -> {
+                            Log.e("delete updates","updates "+updates);
+                            for(ButtonUpdate update : updates) {
+                                Log.e("delete updates", update.getType()+" "+update.getUri());
+                                update.deleteFile(activity.getFilesDir(), MainActivity.buttons);
+                            }
+                        }).start();
                     }
                 })
                 .setNegativeButton("No", new DialogInterface.OnClickListener() {
@@ -53,7 +60,7 @@ public class AlertBox {
     }
 
     //to confirm that user wants to save changes
-    public void confirmGridChanges(List<SpeakButton> buttons) {
+    public void confirmGridChanges(List<SpeakButton> buttons, List<ButtonUpdate> updates) {
         AlertDialog.Builder dialog = new AlertDialog.Builder(activity);
         //Setting message manually and performing action on button click can set text from string.xml also
         dialog.setMessage(msg).setTitle(title)
@@ -63,12 +70,37 @@ public class AlertBox {
                         activity.finish();
                         new Thread(() -> {
                             DatabaseHelper db = DatabaseHelper.getDB(activity);
-                            //TODO when a new button is added we need to add it to database not update
-                            //count database  and update till there rest add
-                            for(SpeakButton button:buttons) {
-                                db.speakButtonDao().updateSpeakButton(button);
-                                Log.d("table contents", button.position + ". text"+ button.getSpokenText()+ "image:" + button.picture + " speech:" + button.speak);
+                            for(int i=0;i<buttons.size();i++) {
+                                SpeakButton newButton = buttons.get(i);
+                                if(newButton.isVideo) newButton.setSpeak(null);
+                                if(MainActivity.buttons.size()>i) {
+                                    SpeakButton oldButton = MainActivity.buttons.get(i);
+                                    if (oldButton.getPicture()!=null && (newButton.getPicture()==null || !oldButton.getPicture().equalsIgnoreCase(newButton.getPicture()))) {
+                                        if (oldButton.isVideo) {
+                                            Log.e("delete old vid", oldButton.getPicture());
+                                            new File(oldButton.getPicture())
+                                                    .delete();
+                                        } else {
+                                            Log.e("delete old pic", oldButton.getPicture());
+                                            if(oldButton.getPicture() != null)
+                                                new File(activity.getFilesDir(),Uri.parse(oldButton.getPicture()).getLastPathSegment())
+                                                        .delete();
+                                        }
+                                    }
+                                    if (oldButton.getSpeak()!=null && (newButton.getSpeak()==null || !oldButton.getSpeak().equalsIgnoreCase(newButton.getSpeak()))) {
+                                        Log.e("delete old aud", oldButton.getSpeak());
+                                        if (oldButton.getSpeak() != null) {
+                                            boolean flag = new File(activity.getFilesDir(),Uri.parse(oldButton.getSpeak()).getLastPathSegment())
+                                                    .delete();
+                                            Log.e("delete old aud", "deleted = "+flag);
+                                        }
+                                    }
+                                }
+                                db.speakButtonDao().updateSpeakButton(newButton);
+                                Log.d("table contents", newButton.position + ". text"+ newButton.getSpokenText()+ "image:" + newButton.picture + " speech:" + newButton.speak);
                             }
+                            for(ButtonUpdate update : updates)
+                                update.deleteFile(activity.getFilesDir(),buttons);
                         }).start();
                     }
                 })

@@ -76,7 +76,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         if (changeLayoutActivity.preferences.getBoolean("showText", false)) {
             holder.spoken_text.setText(button.getSpokenText());
             holder.spoken_text.setVisibility(View.VISIBLE);
-        }else
+        } else
             holder.spoken_text.setVisibility(View.GONE);
 
         Handler updateSeekbarHandler = new Handler();
@@ -135,16 +135,14 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
                 recorder = new MediaRecorder();
                 recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
                 recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+
                 String dest_uri = new StringBuilder(UUID.randomUUID().toString()).append(".mp3").toString();
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    File file = new File(changeLayoutActivity.getExternalFilesDir(Environment.DIRECTORY_RECORDINGS), dest_uri);
-                    recorder.setOutputFile(file);
-                    changeLayoutActivity.buttons.get(holder.getAdapterPosition()).setSpeak(Uri.fromFile(file).toString());
-                } else {
-                    File file = new File(changeLayoutActivity.getExternalFilesDir(Environment.DIRECTORY_MUSIC), dest_uri);
-                    recorder.setOutputFile(file);
-                    changeLayoutActivity.buttons.get(holder.getAdapterPosition()).setSpeak(Uri.fromFile(file).toString());
-                }
+                File file = new File(changeLayoutActivity.getFilesDir(), dest_uri);
+                recorder.setOutputFile(file);
+                changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).setSpeak(Uri.fromFile(file).toString());
+                changeLayoutActivity.updates.add(new ButtonUpdate(file.toURI().toString(),ButtonUpdate.AUDIO));
+                Log.e("updates",changeLayoutActivity.updates.toString());
+
                 recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB);
                 try {
                     recorder.prepare();
@@ -158,9 +156,9 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 
         holder.change_audio.setOnTouchListener((@SuppressLint("ClickableViewAccessibility") View view, MotionEvent motionEvent) -> {
             view.onTouchEvent(motionEvent);
-            if(MotionEvent.ACTION_UP == motionEvent.getAction())
+            if (MotionEvent.ACTION_UP == motionEvent.getAction())
                 Log.e("long press status", "up");
-            if(MotionEvent.ACTION_DOWN == motionEvent.getAction())
+            if (MotionEvent.ACTION_DOWN == motionEvent.getAction())
                 Log.e("long press status", "down");
 
             if (motionEvent.getAction() == MotionEvent.ACTION_UP && longPress) {
@@ -298,7 +296,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         });
 
         holder.editor_button.setOnLongClickListener(view -> {
-            Log.e("drag to delete","drag detected in adapter");
+            Log.e("drag to delete", "drag detected in adapter");
             ChangeLayoutActivity.pos = holder.getBindingAdapterPosition();
             return true;
         });

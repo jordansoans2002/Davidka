@@ -32,12 +32,14 @@ import com.gowtham.library.utils.TrimVideo;
 import com.yalantis.ucrop.UCrop;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 public class ChangeLayoutActivity extends AppCompatActivity {
 
     List<SpeakButton> buttons;
+    List<ButtonUpdate> updates = new ArrayList<>();
     RecyclerView edit_grid;
     CardView add_button;
     ImageView add_button_image;
@@ -59,6 +61,8 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 Log.d("choose intent", "Selected URI: " + uri + " " + uri.getPath() + " position: " + pos);
                 SpeakButton button = buttons.get(pos);
                 button.setSpeak(uri.toString());
+                updates.add(new ButtonUpdate(uri.toString(),ButtonUpdate.AUDIO));
+                Log.e("updates",updates.toString());
                 adapter.notifyItemChanged(pos);
 //            } else {
 //                Log.d("choose intent", "no uri in data");
@@ -72,15 +76,12 @@ public class ChangeLayoutActivity extends AppCompatActivity {
         public void onActivityResult(ActivityResult o) {
             Intent intent = o.getData();
 //            if (o.getResultCode() == RESULT_OK) {
-            SpeakButton button = buttons.get(pos);
             Uri uri = intent == null ? temp_uri : intent.getData();
             Log.e("return uri", uri.toString());
             if (uri.toString().contains("image") || uri.toString().contains("jpg")) {
-//                    if (button.isVideo)
-//                        deleteFile(button.getPicture());
+                updates.add(new ButtonUpdate(uri.toString(),ButtonUpdate.IMAGE));
+                Log.e("updates",updates.toString());
                 Uri dest_uri = Uri.fromFile(new File(getFilesDir(), new StringBuilder(UUID.randomUUID().toString()).append(".jpg").toString()));
-
-
                 Log.e("dest uri", dest_uri.toString());
                 UCrop.of(uri, dest_uri)
                         .withAspectRatio(1, 1)
@@ -91,8 +92,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                         .setHideSeekBar(true)
                         .setAccurateCut(true)
                         .start(ChangeLayoutActivity.this, trimVideo);
-                button.setPicture(uri.toString(), true);
-                adapter.notifyItemChanged(pos);
+
             }
 //            }
         }
@@ -120,9 +120,11 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     Uri uri = Uri.parse(TrimVideo.getTrimmedVideoPath(result.getData()));
                     Log.e("dest uri", uri.toString());
-                    SpeakButton button = buttons.get(pos);
-                    button.setPicture(uri.toString(), true);
+                    buttons.get(pos).setPicture(uri.toString(), true);
+                    updates.add(new ButtonUpdate(uri.toString(),ButtonUpdate.VIDEO));
+                    Log.e("updates",updates.toString());
                     adapter.notifyItemChanged(pos);
+                    pos = -1;
                 }
             }
     );
@@ -135,7 +137,9 @@ public class ChangeLayoutActivity extends AppCompatActivity {
             final Uri resultUri = UCrop.getOutput(data);
             SpeakButton button = buttons.get(pos);
             button.setPicture(resultUri.toString(), false);
+            Log.e("result uri", resultUri.toString());
             adapter.notifyItemChanged(pos);
+            pos = -1;
         } else if (resultCode == UCrop.RESULT_ERROR) {
             final Throwable cropError = UCrop.getError(data);
         }
@@ -243,14 +247,14 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                         this,
                         "Keep changes",
                         "Save changes made to all buttons?");
-                keepChanges.confirmGridChanges(buttons);
+                keepChanges.confirmGridChanges(buttons,updates);
                 return true;
             case R.id.cancel_changes:
                 AlertBox discardChanges = new AlertBox(
                         adapter.changeLayoutActivity,
                         "Discard changes",
                         "Discard changes made to all buttons?");
-                discardChanges.discardGridChanges();
+                discardChanges.discardGridChanges(updates);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -263,7 +267,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 adapter.changeLayoutActivity,
                 "Discard changes",
                 "Discard changes made to all buttons?");
-        discardChanges.discardGridChanges();
+        discardChanges.discardGridChanges(updates);
     }
 
     //TODO causes the record button to not detect the finger up

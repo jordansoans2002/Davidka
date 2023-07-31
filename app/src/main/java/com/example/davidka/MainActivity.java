@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean permissionToReadAccepted = false;
     static final int REQUEST_RECORD_AUDIO_PERMISSION = 201;
     private boolean permissionToRecordAccepted = false;
-    List<SpeakButton> buttons = new ArrayList<>();
+    static List<SpeakButton> buttons = new ArrayList<>();
     RecyclerView picture_grid;
     SharedPreferences preferences;
     MediaPlayer speak;

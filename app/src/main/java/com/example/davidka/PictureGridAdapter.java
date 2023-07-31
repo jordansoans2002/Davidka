@@ -49,11 +49,16 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
                 holder.img.setImageURI(Uri.parse(imgUri));
                 holder.vid.setVisibility(View.GONE);
             } else {
-                holder.vid.setVisibility(View.VISIBLE);
-                holder.vid.setVideoURI(Uri.parse(imgUri));
-                holder.vid.seekTo(1);
-                holder.vid.setOnCompletionListener((mediaPlayer -> holder.vid.seekTo(1)));
-                holder.img.setVisibility(View.GONE);
+                try {
+                    holder.vid.setVisibility(View.VISIBLE);
+                    holder.vid.setVideoURI(Uri.parse(imgUri));
+                    holder.vid.seekTo(1);
+                    holder.vid.setOnCompletionListener((mediaPlayer -> holder.vid.seekTo(1)));
+                    holder.img.setVisibility(View.GONE);
+                }catch (Exception e){
+                    if(e.equals(new IOException()))
+                        Log.e("video exception","exception caught at "+holder.getAbsoluteAdapterPosition());
+                }
             }
         } else {
             if (!mainActivity.preferences.getBoolean("blankButton", false))
