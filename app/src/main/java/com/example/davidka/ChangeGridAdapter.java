@@ -1,19 +1,17 @@
 package com.example.davidka;
 
-import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.ContentValues;
+import android.content.ClipData;
+import android.content.ClipDescription;
 import android.content.Intent;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.net.Uri;
-import android.os.Build;
-import android.os.Environment;
 import android.os.Handler;
-import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.DragEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -30,8 +28,6 @@ import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
-import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
@@ -112,14 +108,11 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
                 holder.seekBar.setMax(holder.video.getDuration());
                 updateSeekbarHandler.postDelayed(updateVideo, 100);
             });
-            holder.video.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                @Override
-                public void onCompletion(MediaPlayer mediaPlayer) {
-                    holder.video.seekTo(1);
-                    holder.seekBar.setProgress(1);
-                    holder.audio_control.setImageResource(R.drawable.baseline_play_arrow_24);
-                    updateSeekbarHandler.removeCallbacks(updateVideo);
-                }
+            holder.video.setOnCompletionListener(mediaPlayer -> {
+                holder.video.seekTo(1);
+                holder.seekBar.setProgress(1);
+                holder.audio_control.setImageResource(R.drawable.baseline_play_arrow_24);
+                updateSeekbarHandler.removeCallbacks(updateVideo);
             });
         }
 
@@ -136,7 +129,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
                 recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
                 recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
 
-                String dest_uri = new StringBuilder(UUID.randomUUID().toString()).append(".mp3").toString();
+                String dest_uri = UUID.randomUUID().toString() + ".mp3";
                 File file = new File(changeLayoutActivity.getFilesDir(), dest_uri);
                 recorder.setOutputFile(file);
                 changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).setSpeak(Uri.fromFile(file).toString());
@@ -308,12 +301,41 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                changeLayoutActivity.buttons.get(holder.getAdapterPosition()).setSpokenText(holder.spoken_text.getText().toString());
+                changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).setSpokenText(holder.spoken_text.getText().toString());
             }
 
             @Override
             public void afterTextChanged(Editable editable) {
             }
+        });
+
+        holder.picture.setOnLongClickListener((view -> {
+            ClipData.Item pos = new ClipData.Item(holder.getAbsoluteAdapterPosition()+"");
+            ClipData.Item viewId = new ClipData.Item(view.getId()+"");
+            ClipDescription description = new ClipDescription(holder.getAbsoluteAdapterPosition()+"",new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN});
+            ClipData clipData = new ClipData(description,pos);
+            clipData.addItem(viewId);
+
+            View.DragShadowBuilder dragShadowBuilder = new View.DragShadowBuilder(holder.editor_button);
+            view.startDragAndDrop(clipData, dragShadowBuilder, holder.editor_button, 0);
+            //todo button doesnt reappear
+//            holder.editor_button.setVisibility(View.INVISIBLE);
+            return true;
+        }));
+
+        holder.editor_button.setOnDragListener((view, dragEvent) -> {
+            if (dragEvent.getAction() == DragEvent.ACTION_DRAG_ENTERED) {
+                int fromPosition = Integer.parseInt(dragEvent.getClipDescription().getLabel().toString());
+                int toPosition = holder.getAbsoluteAdapterPosition();
+                if (fromPosition == toPosition)
+                    return false;
+                SpeakButton btn = new SpeakButton(-1);
+                btn.swap(changeLayoutActivity.buttons.get(fromPosition));
+                changeLayoutActivity.buttons.get(fromPosition).swap(changeLayoutActivity.buttons.get(toPosition));
+                changeLayoutActivity.buttons.get(toPosition).swap(btn);
+                changeLayoutActivity.adapter.notifyItemMoved(fromPosition, toPosition);
+            }
+            return true;
         });
     }
 

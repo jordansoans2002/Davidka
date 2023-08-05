@@ -177,7 +177,7 @@ public class AlertBox {
         return chooserIntent;
     }
 
-    public void deleteButton(List<SpeakButton> buttons,int pos){
+    public void deleteButton(ChangeGridAdapter adapter, List<SpeakButton> buttons, int pos){
         AlertDialog.Builder dialog = new AlertDialog.Builder(activity);
         //Setting message manually and performing action on button click can set text from string.xml also
         dialog.setMessage(msg).setTitle(title)
@@ -185,12 +185,15 @@ public class AlertBox {
                 .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         SpeakButton button = buttons.get(pos);
-                        new File(Uri.parse(button.getPicture()).getPath()).deleteOnExit();
-                        new File(Uri.parse(button.getSpeak()).getPath()).deleteOnExit();
-                        if(buttons.size()>=8) {
+                        if(button.getPicture()!=null)
+                            new File(Uri.parse(button.getPicture()).getPath()).deleteOnExit();
+                        if(button.getSpeak()!=null)
+                            new File(Uri.parse(button.getSpeak()).getPath()).deleteOnExit();
+                        if(buttons.size()>8) {
                             DatabaseHelper db = DatabaseHelper.getDB(activity);
                             db.speakButtonDao().deleteSpeakButton(buttons.get(pos));
                             buttons.remove(pos);
+                            adapter.notifyItemRemoved(pos);
                         } else {
                             button.setPicture(null,false);
                             button.setSpeak(null);
@@ -208,45 +211,4 @@ public class AlertBox {
         AlertDialog alert = dialog.create();
         alert.show();
     }
-    void createChooser(String type){
-        if(type.equalsIgnoreCase("image")){
-            Intent clickImage = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            ChangeLayoutActivity.temp_uri = activity.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new ContentValues());
-            clickImage.putExtra(MediaStore.EXTRA_OUTPUT, ChangeLayoutActivity.temp_uri);
-
-            Intent chooseImage = new Intent();
-            chooseImage.setAction(Intent.ACTION_PICK);
-//            chooseImage.setData(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-            chooseImage.setType("image/*");
-//            chooseImage.setType("image/*,video/*");
-//            chooseImage.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/*","video/*"});
-
-            Intent chooseImgFile = new Intent();
-            chooseImgFile.setType("image/*");
-//            chooseImgFile.setType("*/*");
-//            chooseImgFile.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/*", "video/*"});
-            chooseImgFile.setAction(Intent.ACTION_GET_CONTENT);
-
-            chooserIntent = Intent.createChooser(chooseImage, "Take or select image");
-            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{clickImage, chooseImgFile});
-        } else if(type.equalsIgnoreCase("video")){
-            Intent recordVideo = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-//            ChangeLayoutActivity.temp_uri = changeLayoutActivity.getContentResolver().insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, new ContentValues());
-//            recordVideo.putExtra(MediaStore.EXTRA_OUTPUT, ChangeLayoutActivity.temp_uri);
-
-            Intent chooseVideo = new Intent();
-            chooseVideo.setAction(Intent.ACTION_PICK);
-//            chooseImage.setData(MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
-            chooseVideo.setType("video/*");
-//            chooseImage.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/*","video/*"});
-
-            Intent chooseVidFile = new Intent();
-            chooseVidFile.setType("video/*");
-            chooseVidFile.setAction(Intent.ACTION_GET_CONTENT);
-
-            chooserIntent = Intent.createChooser(chooseVideo, "Take or select image");
-            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{recordVideo, chooseVidFile});
-        }
-    }
-
 }

@@ -66,7 +66,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 adapter.notifyItemChanged(pos);
 //            } else {
 //                Log.d("choose intent", "no uri in data");
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
             pos = -1;
         }
@@ -104,7 +104,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 // photo picker.
                 if (uri != null) {
                     Log.d("PhotoPicker", "Selected URI: " + uri);
-                    String dest_uri = new StringBuilder(UUID.randomUUID().toString()).append(".jpg").toString();
+                    String dest_uri = UUID.randomUUID().toString() + ".jpg";
                     UCrop.of(uri, Uri.fromFile(new File(getFilesDir(), dest_uri)))
                             .withAspectRatio(1, 1)
                             .start(ChangeLayoutActivity.this);
@@ -187,48 +187,44 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 db.speakButtonDao().addSpeakButton(buttons.get(buttons.size() - 1));
             }).start();
         });
-        add_button_image.setOnDragListener(new View.OnDragListener() {
-            @Override
-            public boolean onDrag(View view, DragEvent dragEvent) {
-                Log.e("drag to delete", "drag detected in activity");
-                switch (dragEvent.getAction()) {
-                    case DragEvent.ACTION_DRAG_STARTED:
-                        add_button_image.setImageResource(R.drawable.baseline_delete_24);
-                        add_button_image.setBackgroundColor(Color.RED);
-                        return true;
+        add_button.setOnDragListener((view, dragEvent) -> {
+            switch (dragEvent.getAction()) {
+                case DragEvent.ACTION_DRAG_STARTED:
+                    add_button_image.setImageResource(R.drawable.baseline_delete_24);
+                    add_button_image.setBackgroundColor(Color.RED);
+                    return true;
 
-                    case DragEvent.ACTION_DRAG_ENTERED:
-                        add_button.setScaleX(1.2f);
-                        add_button.setScaleY(1.2f);
-                        return true;
+                case DragEvent.ACTION_DRAG_ENTERED:
+                    add_button.setScaleY(1.3f);
+                    return true;
 
-                    case DragEvent.ACTION_DRAG_EXITED:
-                        add_button.setScaleX(1f);
-                        add_button.setScaleY(1f);
-                        return true;
+                case DragEvent.ACTION_DRAG_EXITED:
+                    add_button.setScaleX(1f);
+                    add_button.setScaleY(1f);
+                    return true;
 
-                    case DragEvent.ACTION_DROP:
-                        String title, msg;
-                        if (buttons.size() >= 8) {
-                            title = "Delete button";
-                            msg = "Are you sure you want to delete this button?";
-                        } else {
-                            title = "Clear button";
-                            msg = "Are you sure you want to remove all media from this button?";
-                        }
+                case DragEvent.ACTION_DROP:
+                    int pos = Integer.parseInt(dragEvent.getClipData().getItemAt(0).getText().toString());
+                    String title, msg;
+                    if (buttons.size() >= 8) {
+                        title = "Delete button";
+                        msg = "Are you sure you want to delete this button?";
+                    } else {
+                        title = "Clear button";
+                        msg = "Are you sure you want to remove all media from this button?";
+                    }
 
-                        AlertBox removeButton = new AlertBox(ChangeLayoutActivity.this, title, msg);
-                        removeButton.deleteButton(buttons, pos);
-                        return true;
+                    AlertBox removeButton = new AlertBox(ChangeLayoutActivity.this, title, msg);
+                    removeButton.deleteButton(adapter,buttons, pos);
+                    return true;
 
-                    case DragEvent.ACTION_DRAG_ENDED:
-                        add_button_image.setImageResource(R.drawable.baseline_add_24);
-                        add_button_image.setBackgroundColor(Color.WHITE);
-                        return true;
+                case DragEvent.ACTION_DRAG_ENDED:
+                    add_button_image.setImageResource(R.drawable.baseline_add_24);
+                    add_button_image.setBackgroundColor(Color.WHITE);
+                    return true;
 
-                    default:
-                        return false;
-                }
+                default:
+                    return false;
             }
         });
     }
@@ -294,47 +290,4 @@ public class ChangeLayoutActivity extends AppCompatActivity {
 
     };
 
-    //TODO add on drag listener to add_button
-    //if buttons more than 8 and button is dragged the hold over add_button to delete
-    View.OnDragListener deleteButton = (View.OnDragListener) (view, dragEvent) -> {
-        Log.e("drag to delete", "drag detected in activity");
-        switch (dragEvent.getAction()) {
-            case DragEvent.ACTION_DRAG_STARTED:
-                add_button_image.setImageResource(R.drawable.baseline_delete_24);
-                add_button_image.setBackgroundColor(Color.RED);
-                return true;
-
-            case DragEvent.ACTION_DRAG_ENTERED:
-                add_button.setScaleX(1.2f);
-                add_button.setScaleY(1.2f);
-                return true;
-
-            case DragEvent.ACTION_DRAG_EXITED:
-                add_button.setScaleX(1f);
-                add_button.setScaleY(1f);
-                return true;
-
-            case DragEvent.ACTION_DROP:
-                String title, msg;
-                if (buttons.size() >= 8) {
-                    title = "Delete button";
-                    msg = "Are you sure you want to delete this button?";
-                } else {
-                    title = "Clear button";
-                    msg = "Are you sure you want to remove all media from this button?";
-                }
-
-                AlertBox removeButton = new AlertBox(this, title, msg);
-                removeButton.deleteButton(buttons, pos);
-                return true;
-
-            case DragEvent.ACTION_DRAG_ENDED:
-                add_button_image.setImageResource(R.drawable.baseline_add_24);
-                add_button_image.setBackgroundColor(Color.WHITE);
-                return true;
-
-            default:
-                return false;
-        }
-    };
 }
