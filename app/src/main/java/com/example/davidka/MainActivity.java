@@ -123,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         for (SpeakButton button : buttons)
-            Log.d("table contents", button.position + ". vid? " + button.isVideo + " image:" + button.picture + " speech:" + button.speak);
+            Log.d("table contents", button.position + ". vid? " + button.isVideo + " image:" + button.getPicture() + " speech:" + button.getSpeak());
 
         PictureGridAdapter adapter = new PictureGridAdapter(this, buttons);
         picture_grid.setAdapter(adapter);

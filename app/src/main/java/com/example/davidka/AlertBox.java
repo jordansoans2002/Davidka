@@ -69,6 +69,8 @@ public class AlertBox {
                     public void onClick(DialogInterface dialog, int id) {
                         activity.finish();
                         new Thread(() -> {
+                            //TODO fails if we change the position or delete a button
+                            //check if the uri is in database if no then delete
                             DatabaseHelper db = DatabaseHelper.getDB(activity);
                             for(int i=0;i<buttons.size();i++) {
                                 SpeakButton newButton = buttons.get(i);
@@ -96,8 +98,9 @@ public class AlertBox {
                                         }
                                     }
                                 }
+                                newButton.setPosition(i);
                                 db.speakButtonDao().updateSpeakButton(newButton);
-                                Log.d("table contents", newButton.position + ". text"+ newButton.getSpokenText()+ "image:" + newButton.picture + " speech:" + newButton.speak);
+                                Log.d("update table contents", newButton.position + ". text"+ newButton.getSpokenText()+ "image:" + newButton.getPicture() + " speech:" + newButton.getSpeak());
                             }
                             for(ButtonUpdate update : updates)
                                 update.deleteFile(activity.getFilesDir(),buttons);
@@ -186,18 +189,23 @@ public class AlertBox {
                     public void onClick(DialogInterface dialog, int id) {
                         SpeakButton button = buttons.get(pos);
                         if(button.getPicture()!=null)
-                            new File(Uri.parse(button.getPicture()).getPath()).deleteOnExit();
+                            new File(Uri.parse(button.getPicture()).getPath()).delete();
                         if(button.getSpeak()!=null)
-                            new File(Uri.parse(button.getSpeak()).getPath()).deleteOnExit();
+                            new File(Uri.parse(button.getSpeak()).getPath()).delete();
+
+                        DatabaseHelper db = DatabaseHelper.getDB(activity);
                         if(buttons.size()>8) {
-                            DatabaseHelper db = DatabaseHelper.getDB(activity);
                             db.speakButtonDao().deleteSpeakButton(buttons.get(pos));
                             buttons.remove(pos);
                             adapter.notifyItemRemoved(pos);
                         } else {
+                            button.setPosition(pos);
                             button.setPicture(null,false);
                             button.setSpeak(null);
                             button.setSpokenText("");
+                            adapter.notifyItemChanged(pos);
+                            db.speakButtonDao().updateSpeakButton(button);
+
                         }
                     }
                 })

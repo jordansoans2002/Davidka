@@ -38,6 +38,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
     ChangeLayoutActivity changeLayoutActivity;
     MediaRecorder recorder;
     static Boolean longPress = false;
+    static Boolean swap = false;
 
     ActivityResultLauncher<PickVisualMediaRequest> getImage;
     ActivityResultLauncher<Intent> pickAudio;
@@ -288,12 +289,6 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             }
         });
 
-        holder.editor_button.setOnLongClickListener(view -> {
-            Log.e("drag to delete", "drag detected in adapter");
-            ChangeLayoutActivity.pos = holder.getBindingAdapterPosition();
-            return true;
-        });
-
         holder.spoken_text.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -312,7 +307,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         holder.picture.setOnLongClickListener((view -> {
             ClipData.Item pos = new ClipData.Item(holder.getAbsoluteAdapterPosition()+"");
             ClipData.Item viewId = new ClipData.Item(view.getId()+"");
-            ClipDescription description = new ClipDescription(holder.getAbsoluteAdapterPosition()+"",new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN});
+            ClipDescription description = new ClipDescription(holder.getBindingAdapterPosition()+"",new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN});
             ClipData clipData = new ClipData(description,pos);
             clipData.addItem(viewId);
 
@@ -323,20 +318,34 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             return true;
         }));
 
-        holder.editor_button.setOnDragListener((view, dragEvent) -> {
-            if (dragEvent.getAction() == DragEvent.ACTION_DRAG_ENTERED) {
-                int fromPosition = Integer.parseInt(dragEvent.getClipDescription().getLabel().toString());
-                int toPosition = holder.getAbsoluteAdapterPosition();
-                if (fromPosition == toPosition)
-                    return false;
-                SpeakButton btn = new SpeakButton(-1);
-                btn.swap(changeLayoutActivity.buttons.get(fromPosition));
-                changeLayoutActivity.buttons.get(fromPosition).swap(changeLayoutActivity.buttons.get(toPosition));
-                changeLayoutActivity.buttons.get(toPosition).swap(btn);
-                changeLayoutActivity.adapter.notifyItemMoved(fromPosition, toPosition);
-            }
-            return true;
-        });
+//        holder.picture.setOnDragListener((view, dragEvent) -> {
+//            if (dragEvent.getAction() == DragEvent.ACTION_DRAG_ENTERED && !swap) {
+//                int fromPosition = Integer.parseInt(dragEvent.getClipDescription().getLabel().toString());
+//                int toPosition = holder.getAbsoluteAdapterPosition();
+//                if (fromPosition == toPosition)
+//                    return false;
+//                Log.e("button drag enter","pos="+holder.getAbsoluteAdapterPosition()+" swap="+swap);
+//                SpeakButton btn = new SpeakButton(-1);
+//                btn.swap(changeLayoutActivity.buttons.get(fromPosition));
+//                changeLayoutActivity.buttons.get(fromPosition).swap(changeLayoutActivity.buttons.get(toPosition));
+//                changeLayoutActivity.buttons.get(toPosition).swap(btn);
+//                changeLayoutActivity.adapter.notifyItemMoved(fromPosition, toPosition);
+//                swap = true;
+//                return false;
+//            } else if (dragEvent.getAction() == DragEvent.ACTION_DRAG_EXITED) {
+//                int fromPosition = Integer.parseInt(dragEvent.getClipDescription().getLabel().toString());
+//                int toPosition = holder.getAbsoluteAdapterPosition();
+//                if (fromPosition == toPosition)
+//                    return false;
+//                Log.e("button drag exit","pos="+holder.getAbsoluteAdapterPosition()+" swap="+swap);
+//                swap = false;
+//            } else if(dragEvent.getAction() == DragEvent.ACTION_DRAG_ENDED)
+//                swap = false;
+////            else if (dragEvent.getAction() == DragEvent.ACTION_DRAG_ENDED) {
+////                holder.editor_button.setVisibility(View.VISIBLE);
+////            }
+//            return true;
+//        });
     }
 
     @Override

@@ -15,6 +15,7 @@ public class ButtonUpdate {
     static final int IMAGE = 2;
     static final int AUDIO = 3;
 
+    //we only want the original and final, first time
     ButtonUpdate(String uri, int type) {
         this.uri = uri;
         this.type = type;

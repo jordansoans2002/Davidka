@@ -1,6 +1,5 @@
 package com.example.davidka;
 
-import android.media.MediaPlayer;
 import android.net.Uri;
 
 import androidx.room.Entity;
@@ -8,6 +7,7 @@ import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
 import java.io.File;
+import java.util.LinkedList;
 
 @Entity
 public class SpeakButton {
@@ -15,20 +15,29 @@ public class SpeakButton {
     @PrimaryKey
     public int position;
 
-    public String speak;
-    public String picture;
-    public String spokenText = "";
-    public Boolean isVideo;
+    String speak;
+    String picture;
+    String spokenText = "";
+    Boolean isVideo;
+
+    @Ignore
+    LinkedList<String> speakUpdates = new LinkedList<>();
+    @Ignore
+    LinkedList<String> pictureUpdates = new LinkedList<>();
 
     public SpeakButton(int position) {
         this.position = position;
         isVideo = false;
+
+        if(speak!=null)
+            speakUpdates.add(0,speak);
+        if(picture!=null)
+            pictureUpdates.add(0,picture);
     }
 
-    public int getPosition() {
-        return position;
+    public void setPosition(int position){
+        this.position = position;
     }
-
     public String getSpeak() {
         return speak;
     }
@@ -36,6 +45,7 @@ public class SpeakButton {
     public void setSpeak(String speak) {
         if(!isVideo)
             this.speak = speak;
+        speakUpdates.add(speak);
     }
 
     public String getPicture() {
@@ -43,10 +53,9 @@ public class SpeakButton {
     }
 
     public void setPicture(String picture, Boolean isVideo) {
-//        if(this.picture != null)
-//            delete(this.picture);
         this.picture = picture;
         this.isVideo = isVideo;
+        pictureUpdates.add(picture);
     }
 
     public String getSpokenText() {

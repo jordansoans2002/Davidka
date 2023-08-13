@@ -28,6 +28,12 @@ public interface SpeakButtonDao {
 //    @Query("select speak, picture from SpeakButton where position = :pos")
 //    SpeakButton getSpeakButton(int pos);
 
+    @Query("SELECT COUNT(*) FROM SpeakButton WHERE picture = :uri")
+    int isPicturePresent(String uri);
+
+    @Query("SELECT COUNT(*) FROM SpeakButton WHERE speak = :uri")
+    int isSpeakPresent(String uri);
+
     @Query("select * from SpeakButton")
     List<SpeakButton> getAllButtons();
 }
