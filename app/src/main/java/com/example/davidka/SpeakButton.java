@@ -3,6 +3,7 @@ package com.example.davidka;
 import android.net.Uri;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
@@ -29,9 +30,25 @@ public class SpeakButton {
     @Ignore
     ButtonUpdate leafPicture = null;
 
-    public SpeakButton(int position) {
+    public SpeakButton(int position, String speak, String picture, String spokenText, Boolean isVideo) {
         this.position = position;
+        this.speak = speak;
+        this.picture = picture;
+        this.spokenText = spokenText;
+        this.isVideo = isVideo;
+
+        rootSpeak = new ButtonUpdate(speak, false);
+        leafSpeak = rootSpeak;
+
+        rootPicture = new ButtonUpdate(picture, isVideo);
+        leafPicture = rootPicture;
     }
+
+//    @Ignore
+//    public SpeakButton(int position) {
+//        this.position = position;
+//        isVideo = false;
+//    }
 
     public void setPosition(int position) {
         this.position = position;
@@ -46,13 +63,7 @@ public class SpeakButton {
     }
 
     public void setSpeak(String speak) {
-//        if(!isVideo)
-//            this.speak = speak;
-        if (rootSpeak == null) {
-            this.speak = speak;
-            rootSpeak = new ButtonUpdate(speak, false);
-            leafSpeak = rootSpeak;
-        } else if (speak != null) {
+         if (speak != null) {
             leafSpeak.setNext(new ButtonUpdate(speak, false));
             leafSpeak = leafSpeak.getNext();
         }
@@ -66,29 +77,12 @@ public class SpeakButton {
             return picture;
     }
 
-    public void setPicture(String picture){
-        String ext = picture.substring(picture.lastIndexOf('.'));
-        this.isVideo = ext.equalsIgnoreCase(".mp4");
-        Log.e("load button",isVideo+"");
-        if (rootPicture == null) {
-            this.picture = picture;
-            rootPicture = new ButtonUpdate(picture, isVideo);
-            leafPicture = rootPicture;
-        }
-    }
-
     public void setPicture(String picture, boolean isVideo) {
-//        this.picture = picture;
         this.isVideo = isVideo;
-
-//        if (rootPicture == null) {
-//            this.picture = picture;
-//            rootPicture = new ButtonUpdate(picture, isVideo);
-//            leafPicture = rootPicture;
-//        } else if (picture != null) {
+        if (picture != null) {
             leafPicture.setNext(new ButtonUpdate(picture, isVideo));
             leafPicture = leafPicture.getNext();
-//        }
+        }
     }
 
     public String getSpokenText() {
@@ -120,7 +114,7 @@ public class SpeakButton {
         leaf = null;
     }
 
-    public static void deleteFile(File dir, String uri, boolean isExternal) {
+    public static void deleteFile(File dir, @NonNull String uri, boolean isExternal) {
         if (!isExternal) {
             Log.e("delete file", "delete uri " + uri + " type " + isExternal);
             new File(dir, Uri.parse(uri).getLastPathSegment())

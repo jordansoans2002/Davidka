@@ -73,24 +73,24 @@ public class ChangeLayoutActivity extends AppCompatActivity {
         @Override
         public void onActivityResult(ActivityResult o) {
             Intent intent = o.getData();
-//            if (o.getResultCode() == RESULT_OK) {
             Uri uri = intent == null ? temp_uri : intent.getData();
-            Log.e("return uri", uri.toString());
-            if (uri.toString().contains("image") || uri.toString().contains("jpeg") || uri.toString().contains("jpg")) {
-                Uri dest_uri = Uri.fromFile(new File(getFilesDir(), UUID.randomUUID().toString() + ".jpg"));
-                Log.e("dest uri", dest_uri.toString());
-                UCrop.of(uri, dest_uri)
-                        .withAspectRatio(1, 1)
-                        .start(ChangeLayoutActivity.this);
-            } else if (uri.toString().contains("video") || uri.toString().contains("mp4")) {//VID,Movies,mp4
+            if (o.getResultCode() == RESULT_OK && uri != null) {
+                Log.e("return uri", uri.toString());
+                if (uri.toString().contains("image") || uri.toString().contains("jpeg") || uri.toString().contains("jpg")) {
+                    Uri dest_uri = Uri.fromFile(new File(getFilesDir(), UUID.randomUUID().toString() + ".jpg"));
+                    Log.e("dest uri", dest_uri.toString());
+                    UCrop.of(uri, dest_uri)
+                            .withAspectRatio(1, 1)
+                            .start(ChangeLayoutActivity.this);
+                } else if (uri.toString().contains("video") || uri.toString().contains("mp4")) {//VID,Movies,mp4
 
-                TrimVideo.activity(uri.toString())
-                        .setHideSeekBar(true)
-                        .setAccurateCut(true)
-                        .start(ChangeLayoutActivity.this, trimVideo);
+                    TrimVideo.activity(uri.toString())
+                            .setHideSeekBar(true)
+                            .setAccurateCut(true)
+                            .start(ChangeLayoutActivity.this, trimVideo);
 
+                }
             }
-//            }
         }
     });
 
@@ -178,7 +178,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
 //        itemTouchHelper.attachToRecyclerView(edit_grid);
 
         add_button.setOnClickListener((view) -> {
-            buttons.add(new SpeakButton(buttons.size()));
+            buttons.add(new SpeakButton(buttons.size(),null,null,"",false));
             adapter.notifyItemInserted(buttons.size() - 1);
 
             new Thread(() -> {

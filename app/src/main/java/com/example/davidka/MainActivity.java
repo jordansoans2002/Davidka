@@ -46,6 +46,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Log.e("pref", "get pref");
+
         picture_grid = findViewById(R.id.picture_grid);
 
         //preferences are loaded after onResume
@@ -71,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
         switch (requestCode) {
             case REQUEST_READ_EXT_STORAGE:
                 permissionToReadAccepted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-                preferences.edit().putBoolean("addVideo", true);
+                preferences.edit().putBoolean("addVideo", true).apply();
                 break;
             case REQUEST_RECORD_AUDIO_PERMISSION:
                 permissionToRecordAccepted = grantResults[1] == PackageManager.PERMISSION_GRANTED;
@@ -122,7 +124,7 @@ public class MainActivity extends AppCompatActivity {
 //                MainActivity.buttons = db.speakButtonDao().getTop8();
             if (buttons.size() == 0) {
                 for (int i = 0; i < 8; i++) {
-                    SpeakButton button = new SpeakButton(i);
+                    SpeakButton button = new SpeakButton(i,null,null,"",false);
                     buttons.add(button);
                     db.speakButtonDao().addSpeakButton(button);
                 }

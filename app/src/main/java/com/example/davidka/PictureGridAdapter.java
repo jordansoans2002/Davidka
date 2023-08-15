@@ -6,7 +6,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -14,7 +13,6 @@ import android.widget.VideoView;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.IOException;
@@ -44,6 +42,8 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
         SpeakButton button = buttons.get(holder.getAbsoluteAdapterPosition());
         String imgUri = button.getPicture();
         if (imgUri != null) {
+//            String ext = imgUri.substring(imgUri.lastIndexOf('.'));
+//            button.isVideo = ext.equalsIgnoreCase(".mp4");
             if (!button.isVideo) {
                 holder.img.setVisibility(View.VISIBLE);
                 holder.img.setImageURI(Uri.parse(imgUri));

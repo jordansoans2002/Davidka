@@ -39,20 +39,21 @@ public class AlertBox {
                 .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         activity.finish();
-                        for (SpeakButton button : buttons)
-                            Log.d("table contents", button.position + ". vid? " + button.isVideo + " image:" + button.getPicture() + " speech:" + button.getSpeak());
+
                         new Thread(() -> {
                             DatabaseHelper db = DatabaseHelper.getDB(activity);
                             for(int i=0;i< buttons.size();i++){
                                 SpeakButton button = buttons.get(i);
 
-                                if(save && button.rootSpeak.getNext() != null && button.rootPicture.getNext() != null) {
-                                    if(button.leafSpeak.getNext() != null)
-                                        button.speak = button.leafSpeak.getUri();
-                                    if(button.leafPicture.getNext() != null) {
+                                if(save && (button.rootSpeak.getNext() != null || button.rootPicture.getNext() != null)) {
+                                    if(button.rootPicture.getNext() != null) {
                                         button.picture = button.leafPicture.getUri();
                                         button.isVideo = button.leafPicture.isVideo;
                                     }
+                                    if(button.rootSpeak.getNext() != null) {
+                                        button.speak = button.isVideo? null : button.leafSpeak.getUri();
+                                    }
+                                    Log.e("save buttons","buttons updated");
                                     button.setPosition(i);
                                     db.speakButtonDao().updateSpeakButton(button);
                                 }
@@ -66,13 +67,15 @@ public class AlertBox {
                                 }
                                 if(button.rootPicture.getNext() != null){
                                     Log.e("deleting picture list","current "+button.rootPicture.getUri()+" leaf "+button.leafPicture.getUri());
+                                    if(button.isVideo && save)
+                                        SpeakButton.deleteFile(activity.getFilesDir(), button.leafSpeak.getUri(), false);
+                                    if(button.isVideo && !save)
+                                        SpeakButton.deleteFile(activity.getFilesDir(), button.rootSpeak.getUri(), false);
                                     button.deleteUpdates(activity.getFilesDir(), button.rootPicture, button.leafPicture, save);
                                 }
-//                                if(save) {
-//                                    button.setPosition(i);
-//                                    db.speakButtonDao().updateSpeakButton(button);
-//                                }
                             }
+                            for (SpeakButton button : buttons)
+                                Log.d("table contents", button.position + ". vid? " + button.isVideo + " image:" + button.picture + " speech:" + button.speak);
                         }).start();
                     }
                 })
@@ -97,12 +100,12 @@ public class AlertBox {
                         SpeakButton button = buttons.get(pos);
 
                         //either the root or leaf is not deleted check
-                        if(button.rootSpeak!=null)
+                        if(button.rootSpeak.getUri()!=null)
                             SpeakButton.deleteFile(activity.getFilesDir(), button.rootSpeak.getUri(), false);
                         if(button.rootSpeak != button.leafSpeak)
                             button.deleteUpdates(activity.getFilesDir(),button.rootSpeak,button.leafSpeak,false);
 
-                        if(button.rootPicture!=null)
+                        if(button.rootPicture.getUri()!=null)
                             SpeakButton.deleteFile(activity.getFilesDir(), button.rootPicture.getUri(), button.rootPicture.isVideo);
                         if(button.rootPicture != button.leafPicture)
                             button.deleteUpdates(activity.getFilesDir(),button.rootPicture,button.leafPicture,false);
