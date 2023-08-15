@@ -30,8 +30,8 @@ public class AlertBox {
         this.msg = msg;
     }
 
-    //to confirm that user wants to discard changes
-    public void discardGridChanges(List<ButtonUpdate> updates) {
+    //to confirm that user wants to save/discard changes
+    public void gridChanges(List<SpeakButton> buttons, boolean save) {
         AlertDialog.Builder dialog = new AlertDialog.Builder(activity);
         //Setting message manually and performing action on button click can set text from string.xml also
         dialog.setMessage(msg).setTitle(title)
@@ -39,11 +39,39 @@ public class AlertBox {
                 .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         activity.finish();
+                        for (SpeakButton button : buttons)
+                            Log.d("table contents", button.position + ". vid? " + button.isVideo + " image:" + button.getPicture() + " speech:" + button.getSpeak());
                         new Thread(() -> {
-                            Log.e("delete updates","updates "+updates);
-                            for(ButtonUpdate update : updates) {
-                                Log.e("delete updates", update.getType()+" "+update.getUri());
-                                update.deleteFile(activity.getFilesDir(), MainActivity.buttons);
+                            DatabaseHelper db = DatabaseHelper.getDB(activity);
+                            for(int i=0;i< buttons.size();i++){
+                                SpeakButton button = buttons.get(i);
+
+                                if(save && button.rootSpeak.getNext() != null && button.rootPicture.getNext() != null) {
+                                    if(button.leafSpeak.getNext() != null)
+                                        button.speak = button.leafSpeak.getUri();
+                                    if(button.leafPicture.getNext() != null) {
+                                        button.picture = button.leafPicture.getUri();
+                                        button.isVideo = button.leafPicture.isVideo;
+                                    }
+                                    button.setPosition(i);
+                                    db.speakButtonDao().updateSpeakButton(button);
+                                }
+
+                                //root is not null even when there are no updates, deletes all updates including the one we want to save
+                                if(button.rootSpeak.getNext() == null && button.rootPicture.getNext() == null)
+                                    continue;
+                                if(button.rootSpeak.getNext() != null) {
+                                    Log.e("deleting speak list","current "+button.rootSpeak.getUri()+" leaf "+button.leafSpeak.getUri());
+                                    button.deleteUpdates(activity.getFilesDir(), button.rootSpeak, button.leafSpeak, save);
+                                }
+                                if(button.rootPicture.getNext() != null){
+                                    Log.e("deleting picture list","current "+button.rootPicture.getUri()+" leaf "+button.leafPicture.getUri());
+                                    button.deleteUpdates(activity.getFilesDir(), button.rootPicture, button.leafPicture, save);
+                                }
+//                                if(save) {
+//                                    button.setPosition(i);
+//                                    db.speakButtonDao().updateSpeakButton(button);
+//                                }
                             }
                         }).start();
                     }
@@ -59,52 +87,40 @@ public class AlertBox {
         alert.show();
     }
 
-    //to confirm that user wants to save changes
-    public void confirmGridChanges(List<SpeakButton> buttons, List<ButtonUpdate> updates) {
+    public void deleteButton(ChangeGridAdapter adapter, List<SpeakButton> buttons, int pos){
         AlertDialog.Builder dialog = new AlertDialog.Builder(activity);
         //Setting message manually and performing action on button click can set text from string.xml also
         dialog.setMessage(msg).setTitle(title)
                 .setCancelable(true)
                 .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        activity.finish();
-                        new Thread(() -> {
-                            //TODO fails if we change the position or delete a button
-                            //check if the uri is in database if no then delete
-                            DatabaseHelper db = DatabaseHelper.getDB(activity);
-                            for(int i=0;i<buttons.size();i++) {
-                                SpeakButton newButton = buttons.get(i);
-                                if(newButton.isVideo) newButton.setSpeak(null);
-                                if(MainActivity.buttons.size()>i) {
-                                    SpeakButton oldButton = MainActivity.buttons.get(i);
-                                    if (oldButton.getPicture()!=null && (newButton.getPicture()==null || !oldButton.getPicture().equalsIgnoreCase(newButton.getPicture()))) {
-                                        if (oldButton.isVideo) {
-                                            Log.e("delete old vid", oldButton.getPicture());
-                                            new File(oldButton.getPicture())
-                                                    .delete();
-                                        } else {
-                                            Log.e("delete old pic", oldButton.getPicture());
-                                            if(oldButton.getPicture() != null)
-                                                new File(activity.getFilesDir(),Uri.parse(oldButton.getPicture()).getLastPathSegment())
-                                                        .delete();
-                                        }
-                                    }
-                                    if (oldButton.getSpeak()!=null && (newButton.getSpeak()==null || !oldButton.getSpeak().equalsIgnoreCase(newButton.getSpeak()))) {
-                                        Log.e("delete old aud", oldButton.getSpeak());
-                                        if (oldButton.getSpeak() != null) {
-                                            boolean flag = new File(activity.getFilesDir(),Uri.parse(oldButton.getSpeak()).getLastPathSegment())
-                                                    .delete();
-                                            Log.e("delete old aud", "deleted = "+flag);
-                                        }
-                                    }
-                                }
-                                newButton.setPosition(i);
-                                db.speakButtonDao().updateSpeakButton(newButton);
-                                Log.d("update table contents", newButton.position + ". text"+ newButton.getSpokenText()+ "image:" + newButton.getPicture() + " speech:" + newButton.getSpeak());
-                            }
-                            for(ButtonUpdate update : updates)
-                                update.deleteFile(activity.getFilesDir(),buttons);
-                        }).start();
+                        SpeakButton button = buttons.get(pos);
+
+                        //either the root or leaf is not deleted check
+                        if(button.rootSpeak!=null)
+                            SpeakButton.deleteFile(activity.getFilesDir(), button.rootSpeak.getUri(), false);
+                        if(button.rootSpeak != button.leafSpeak)
+                            button.deleteUpdates(activity.getFilesDir(),button.rootSpeak,button.leafSpeak,false);
+
+                        if(button.rootPicture!=null)
+                            SpeakButton.deleteFile(activity.getFilesDir(), button.rootPicture.getUri(), button.rootPicture.isVideo);
+                        if(button.rootPicture != button.leafPicture)
+                            button.deleteUpdates(activity.getFilesDir(),button.rootPicture,button.leafPicture,false);
+
+                        DatabaseHelper db = DatabaseHelper.getDB(activity);
+                        if(buttons.size()>8) {
+                            db.speakButtonDao().deleteSpeakButton(buttons.get(pos));
+                            buttons.remove(pos);
+                            adapter.notifyItemRemoved(pos);
+                        } else {
+                            button.setPosition(pos);
+                            button.picture = null;
+                            button.isVideo = false;
+                            button.speak = null;
+                            button.setSpokenText("");
+                            adapter.notifyItemChanged(pos);
+                            db.speakButtonDao().updateSpeakButton(button);
+                        }
                     }
                 })
                 .setNegativeButton("No", new DialogInterface.OnClickListener() {
@@ -178,45 +194,5 @@ public class AlertBox {
         chooseIntent.show();
 
         return chooserIntent;
-    }
-
-    public void deleteButton(ChangeGridAdapter adapter, List<SpeakButton> buttons, int pos){
-        AlertDialog.Builder dialog = new AlertDialog.Builder(activity);
-        //Setting message manually and performing action on button click can set text from string.xml also
-        dialog.setMessage(msg).setTitle(title)
-                .setCancelable(true)
-                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        SpeakButton button = buttons.get(pos);
-                        if(button.getPicture()!=null)
-                            new File(Uri.parse(button.getPicture()).getPath()).delete();
-                        if(button.getSpeak()!=null)
-                            new File(Uri.parse(button.getSpeak()).getPath()).delete();
-
-                        DatabaseHelper db = DatabaseHelper.getDB(activity);
-                        if(buttons.size()>8) {
-                            db.speakButtonDao().deleteSpeakButton(buttons.get(pos));
-                            buttons.remove(pos);
-                            adapter.notifyItemRemoved(pos);
-                        } else {
-                            button.setPosition(pos);
-                            button.setPicture(null,false);
-                            button.setSpeak(null);
-                            button.setSpokenText("");
-                            adapter.notifyItemChanged(pos);
-                            db.speakButtonDao().updateSpeakButton(button);
-
-                        }
-                    }
-                })
-                .setNegativeButton("No", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        //  Action for 'NO' Button
-                        dialog.cancel();
-                    }
-                });
-
-        AlertDialog alert = dialog.create();
-        alert.show();
     }
 }

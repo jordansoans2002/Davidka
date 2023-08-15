@@ -8,6 +8,7 @@ import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -48,14 +49,14 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         this.changeLayoutActivity = changeLayoutActivity;
         this.pickAudio = pickAudio;
         this.pickImage = pickImage;
-        this.getImage = changeLayoutActivity.registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
-            if (uri != null) {
-                Log.d("PhotoPicker", "Selected URI: " + uri);
-
-            } else {
-                Log.d("PhotoPicker", "No media selected");
-            }
-        });
+//        this.getImage = changeLayoutActivity.registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
+//            if (uri != null) {
+//                Log.d("PhotoPicker", "Selected URI: " + uri);
+//
+//            } else {
+//                Log.d("PhotoPicker", "No media selected");
+//            }
+//        });
     }
 
     @NonNull
@@ -76,7 +77,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         } else
             holder.spoken_text.setVisibility(View.GONE);
 
-        Handler updateSeekbarHandler = new Handler();
+        Handler updateSeekbarHandler = new Handler(Looper.getMainLooper());
         Runnable updateVideo = new Runnable() {
             @Override
             public void run() {
@@ -134,8 +135,6 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
                 File file = new File(changeLayoutActivity.getFilesDir(), dest_uri);
                 recorder.setOutputFile(file);
                 changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).setSpeak(Uri.fromFile(file).toString());
-                changeLayoutActivity.updates.add(new ButtonUpdate(file.toURI().toString(),ButtonUpdate.AUDIO));
-                Log.e("updates",changeLayoutActivity.updates.toString());
 
                 recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB);
                 try {

@@ -18,6 +18,8 @@ import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -46,9 +48,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         picture_grid = findViewById(R.id.picture_grid);
 
-        preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        Log.e("pref", preferences.getAll().toString());
-
         //preferences are loaded after onResume
 //        if (preferences.getBoolean("startupSound", false)) {
 //            MediaPlayer startup = MediaPlayer.create(this, R.raw.startup_sound_davidka);
@@ -72,18 +71,18 @@ public class MainActivity extends AppCompatActivity {
         switch (requestCode) {
             case REQUEST_READ_EXT_STORAGE:
                 permissionToReadAccepted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-                preferences.edit().putBoolean("addVideo",true);
+                preferences.edit().putBoolean("addVideo", true);
                 break;
             case REQUEST_RECORD_AUDIO_PERMISSION:
                 permissionToRecordAccepted = grantResults[1] == PackageManager.PERMISSION_GRANTED;
-                preferences.edit().putBoolean("addAudio",true).apply();
+                preferences.edit().putBoolean("addAudio", true).apply();
                 break;
         }
         if (!permissionToRecordAccepted)
-            preferences.edit().putBoolean("addAudio",false).apply();
+            preferences.edit().putBoolean("addAudio", false).apply();
 
-        if(!permissionToReadAccepted)
-            preferences.edit().putBoolean("addVideo",false).apply();
+        if (!permissionToReadAccepted)
+            preferences.edit().putBoolean("addVideo", false).apply();
 
     }
 
@@ -94,7 +93,10 @@ public class MainActivity extends AppCompatActivity {
 
 //        ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO}, ChangeLayoutActivity.REQUEST_RECORD_AUDIO_PERMISSION);
 
-        if(preferences.getBoolean("appVolume",false)) {
+        preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        Log.e("pref", preferences.getAll().toString());
+
+        if (preferences.getBoolean("appVolume", false)) {
             AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
             int originalVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
             preferences.edit().putInt("originalVolume", originalVol).apply();
@@ -111,30 +113,38 @@ public class MainActivity extends AppCompatActivity {
 
         //TODO check and get all required permissions here
 
-        //TODO do all this on a seperate thread
-        DatabaseHelper db = DatabaseHelper.getDB(this);
-        this.buttons = db.speakButtonDao().getAllButtons();
-        if (buttons.size() == 0) {
-            for (int i = 0; i < 8; i++) {
-                SpeakButton button = new SpeakButton(i);
-                buttons.add(button);
-                db.speakButtonDao().addSpeakButton(button);
+        new Thread(() -> {
+            DatabaseHelper db = DatabaseHelper.getDB(this);
+            //you can have as many buttons in edit view but only the first 8 will be shown
+//            if (preferences.getBoolean("scrollable", false))
+                MainActivity.buttons = db.speakButtonDao().getAllButtons();
+//            else
+//                MainActivity.buttons = db.speakButtonDao().getTop8();
+            if (buttons.size() == 0) {
+                for (int i = 0; i < 8; i++) {
+                    SpeakButton button = new SpeakButton(i);
+                    buttons.add(button);
+                    db.speakButtonDao().addSpeakButton(button);
+                }
             }
-        }
 
-        for (SpeakButton button : buttons)
-            Log.d("table contents", button.position + ". vid? " + button.isVideo + " image:" + button.getPicture() + " speech:" + button.getSpeak());
+            for (SpeakButton button : buttons)
+                Log.d("table contents", button.position + ". vid? " + button.isVideo + " image:" + button.picture + " speech:" + button.speak);
 
-        PictureGridAdapter adapter = new PictureGridAdapter(this, buttons);
-        picture_grid.setAdapter(adapter);
-        picture_grid.setLayoutManager(new GridLayoutManager(this, 2));
+            new Handler(Looper.getMainLooper()).post(() -> {
+                Log.e("database thread","buttons fetched");
+                PictureGridAdapter adapter = new PictureGridAdapter(this, buttons);
+                picture_grid.setAdapter(adapter);
+                picture_grid.setLayoutManager(new GridLayoutManager(this, 2));
+            });
+        }).start();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
 
-        if(preferences.getBoolean("appVolume",false)) {
+        if (preferences.getBoolean("appVolume", false)) {
             AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
             int originalVol = preferences.getInt("originalVolume", 50);
             audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, originalVol, 0);

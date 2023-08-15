@@ -1,13 +1,13 @@
 package com.example.davidka;
 
 import android.net.Uri;
+import android.util.Log;
 
 import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
 import java.io.File;
-import java.util.LinkedList;
 
 @Entity
 public class SpeakButton {
@@ -21,41 +21,74 @@ public class SpeakButton {
     Boolean isVideo;
 
     @Ignore
-    LinkedList<String> speakUpdates = new LinkedList<>();
+    ButtonUpdate rootSpeak = null;
     @Ignore
-    LinkedList<String> pictureUpdates = new LinkedList<>();
+    ButtonUpdate leafSpeak = null;
+    @Ignore
+    ButtonUpdate rootPicture = null;
+    @Ignore
+    ButtonUpdate leafPicture = null;
 
     public SpeakButton(int position) {
         this.position = position;
-        isVideo = false;
-
-        if(speak!=null)
-            speakUpdates.add(0,speak);
-        if(picture!=null)
-            pictureUpdates.add(0,picture);
     }
 
-    public void setPosition(int position){
+    public void setPosition(int position) {
         this.position = position;
     }
+
     public String getSpeak() {
-        return speak;
+//        return speak;
+        if (leafSpeak != null)
+            return leafSpeak.getUri();
+        else
+            return speak;
     }
 
     public void setSpeak(String speak) {
-        if(!isVideo)
+//        if(!isVideo)
+//            this.speak = speak;
+        if (rootSpeak == null) {
             this.speak = speak;
-        speakUpdates.add(speak);
+            rootSpeak = new ButtonUpdate(speak, false);
+            leafSpeak = rootSpeak;
+        } else if (speak != null) {
+            leafSpeak.setNext(new ButtonUpdate(speak, false));
+            leafSpeak = leafSpeak.getNext();
+        }
     }
 
     public String getPicture() {
-        return picture;
+//        return picture;
+        if (leafPicture != null)
+            return leafPicture.getUri();
+        else
+            return picture;
     }
 
-    public void setPicture(String picture, Boolean isVideo) {
-        this.picture = picture;
+    public void setPicture(String picture){
+        String ext = picture.substring(picture.lastIndexOf('.'));
+        this.isVideo = ext.equalsIgnoreCase(".mp4");
+        Log.e("load button",isVideo+"");
+        if (rootPicture == null) {
+            this.picture = picture;
+            rootPicture = new ButtonUpdate(picture, isVideo);
+            leafPicture = rootPicture;
+        }
+    }
+
+    public void setPicture(String picture, boolean isVideo) {
+//        this.picture = picture;
         this.isVideo = isVideo;
-        pictureUpdates.add(picture);
+
+//        if (rootPicture == null) {
+//            this.picture = picture;
+//            rootPicture = new ButtonUpdate(picture, isVideo);
+//            leafPicture = rootPicture;
+//        } else if (picture != null) {
+            leafPicture.setNext(new ButtonUpdate(picture, isVideo));
+            leafPicture = leafPicture.getNext();
+//        }
     }
 
     public String getSpokenText() {
@@ -66,13 +99,33 @@ public class SpeakButton {
         this.spokenText = spokenText;
     }
 
-    public void swap(SpeakButton temp){
-        setSpeak(temp.getSpeak());
-        setPicture(temp.getPicture(),temp.isVideo);
-        setSpokenText(temp.getSpokenText());
+//    public void swap(SpeakButton temp){
+//        setSpeak(temp.getSpeak());
+//        setPicture(temp.getPicture(),temp.isVideo);
+//        setSpokenText(temp.getSpokenText());
+//    }
+
+    public void deleteUpdates(File dir, ButtonUpdate root, ButtonUpdate leaf, boolean save) {
+        ButtonUpdate current = save ? root : root.getNext();
+
+        while ((!save && current != null) || (save && current != null && current.getNext() != null)) {
+            ButtonUpdate temp = current;
+            Log.e("deleting linked list", "current " + current.getUri() + " next " + current.getNext());
+            if (temp.getUri() != null)
+                deleteFile(dir, temp.getUri(), temp.isVideo);
+            current = temp.getNext();
+            temp = null;
+        }
+        root = null;
+        leaf = null;
     }
 
-    public void delete(String uri){
-        new File(Uri.parse(uri).getPath()).delete();
+    public static void deleteFile(File dir, String uri, boolean isExternal) {
+        if (!isExternal) {
+            Log.e("delete file", "delete uri " + uri + " type " + isExternal);
+            new File(dir, Uri.parse(uri).getLastPathSegment())
+                    .delete();
+        } else
+            new File(uri).delete();
     }
 }

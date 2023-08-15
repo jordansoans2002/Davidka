@@ -21,25 +21,25 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.DragEvent;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.ImageView;
 
 import com.gowtham.library.utils.TrimVideo;
 import com.yalantis.ucrop.UCrop;
 
 import java.io.File;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 public class ChangeLayoutActivity extends AppCompatActivity {
 
     List<SpeakButton> buttons;
-    List<ButtonUpdate> updates = new ArrayList<>();
     RecyclerView edit_grid;
     CardView add_button;
     ImageView add_button_image;
@@ -61,8 +61,6 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 Log.d("choose intent", "Selected URI: " + uri + " " + uri.getPath() + " position: " + pos);
                 SpeakButton button = buttons.get(pos);
                 button.setSpeak(uri.toString());
-                updates.add(new ButtonUpdate(uri.toString(),ButtonUpdate.AUDIO));
-                Log.e("updates",updates.toString());
                 adapter.notifyItemChanged(pos);
 //            } else {
 //                Log.d("choose intent", "no uri in data");
@@ -78,10 +76,8 @@ public class ChangeLayoutActivity extends AppCompatActivity {
 //            if (o.getResultCode() == RESULT_OK) {
             Uri uri = intent == null ? temp_uri : intent.getData();
             Log.e("return uri", uri.toString());
-            if (uri.toString().contains("image") || uri.toString().contains("jpg")) {
-                updates.add(new ButtonUpdate(uri.toString(),ButtonUpdate.IMAGE));
-                Log.e("updates",updates.toString());
-                Uri dest_uri = Uri.fromFile(new File(getFilesDir(), new StringBuilder(UUID.randomUUID().toString()).append(".jpg").toString()));
+            if (uri.toString().contains("image") || uri.toString().contains("jpeg") || uri.toString().contains("jpg")) {
+                Uri dest_uri = Uri.fromFile(new File(getFilesDir(), UUID.randomUUID().toString() + ".jpg"));
                 Log.e("dest uri", dest_uri.toString());
                 UCrop.of(uri, dest_uri)
                         .withAspectRatio(1, 1)
@@ -121,8 +117,6 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                     Uri uri = Uri.parse(TrimVideo.getTrimmedVideoPath(result.getData()));
                     Log.e("dest uri", uri.toString());
                     buttons.get(pos).setPicture(uri.toString(), true);
-                    updates.add(new ButtonUpdate(uri.toString(),ButtonUpdate.VIDEO));
-                    Log.e("updates",updates.toString());
                     adapter.notifyItemChanged(pos);
                     pos = -1;
                 }
@@ -168,12 +162,16 @@ public class ChangeLayoutActivity extends AppCompatActivity {
         add_button = findViewById(R.id.add_button);
         add_button_image = findViewById(R.id.add_button_image);
 
-        DatabaseHelper db = DatabaseHelper.getDB(this);
-        buttons = db.speakButtonDao().getAllButtons();
+        new Thread(() -> {
+            DatabaseHelper db = DatabaseHelper.getDB(this);
+            buttons = db.speakButtonDao().getAllButtons();
 
-        adapter = new ChangeGridAdapter(this, pickAudio, pickImage);
-        edit_grid.setAdapter(adapter);
-        edit_grid.setLayoutManager(new GridLayoutManager(this, 2));
+            new Handler(Looper.getMainLooper()).post(() -> {
+                adapter = new ChangeGridAdapter(this, pickAudio, pickImage);
+                edit_grid.setAdapter(adapter);
+                edit_grid.setLayoutManager(new GridLayoutManager(this, 2));
+            });
+        }).start();
 
         //doesnt allow the mic button to detect long press release
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleCallback);
@@ -184,6 +182,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
             adapter.notifyItemInserted(buttons.size() - 1);
 
             new Thread(() -> {
+                DatabaseHelper db = DatabaseHelper.getDB(this);
                 db.speakButtonDao().addSpeakButton(buttons.get(buttons.size() - 1));
             }).start();
         });
@@ -215,7 +214,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                     }
 
                     AlertBox removeButton = new AlertBox(ChangeLayoutActivity.this, title, msg);
-                    removeButton.deleteButton(adapter,buttons, pos);
+                    removeButton.deleteButton(adapter, buttons, pos);
                     return true;
 
                 case DragEvent.ACTION_DRAG_ENDED:
@@ -243,14 +242,14 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                         this,
                         "Keep changes",
                         "Save changes made to all buttons?");
-                keepChanges.confirmGridChanges(buttons,updates);
+                keepChanges.gridChanges(buttons, true);
                 return true;
             case R.id.cancel_changes:
                 AlertBox discardChanges = new AlertBox(
                         adapter.changeLayoutActivity,
                         "Discard changes",
                         "Discard changes made to all buttons?");
-                discardChanges.discardGridChanges(updates);
+                discardChanges.gridChanges(buttons, false);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -263,7 +262,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 adapter.changeLayoutActivity,
                 "Discard changes",
                 "Discard changes made to all buttons?");
-        discardChanges.discardGridChanges(updates);
+        discardChanges.gridChanges(buttons, false);
     }
 
     //TODO causes the record button to not detect the finger up
@@ -274,10 +273,11 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 int fromPosition = viewHolder.getAbsoluteAdapterPosition();
                 int toPosition = target.getAbsoluteAdapterPosition();
 
-                SpeakButton btn = new SpeakButton(-1);
-                btn.swap(buttons.get(fromPosition));
-                buttons.get(fromPosition).swap(buttons.get(toPosition));
-                buttons.get(toPosition).swap(btn);
+                Collections.swap(buttons, fromPosition, toPosition);
+//                SpeakButton btn = new SpeakButton(-1);
+//                btn.swap(buttons.get(fromPosition));
+//                buttons.get(fromPosition).swap(buttons.get(toPosition));
+//                buttons.get(toPosition).swap(btn);
 
                 adapter.notifyItemMoved(fromPosition, toPosition);
             }
