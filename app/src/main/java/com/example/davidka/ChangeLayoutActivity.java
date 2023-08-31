@@ -40,6 +40,7 @@ import java.util.UUID;
 public class ChangeLayoutActivity extends AppCompatActivity {
 
     List<SpeakButton> buttons;
+    int deletedButtons = 0;
     RecyclerView edit_grid;
     CardView add_button;
     ImageView add_button_image;
@@ -62,8 +63,6 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 SpeakButton button = buttons.get(pos);
                 button.setSpeak(uri.toString());
                 adapter.notifyItemChanged(pos);
-//            } else {
-//                Log.d("choose intent", "no uri in data");
             } catch (Exception ignored) {
             }
             pos = -1;
@@ -109,7 +108,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 }
             });
 
-
+    //TODO set max and min length
     ActivityResultLauncher<Intent> trimVideo = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
@@ -184,6 +183,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
             new Thread(() -> {
                 DatabaseHelper db = DatabaseHelper.getDB(this);
                 db.speakButtonDao().addSpeakButton(buttons.get(buttons.size() - 1));
+                deletedButtons--;
             }).start();
         });
         add_button.setOnDragListener((view, dragEvent) -> {
@@ -204,17 +204,14 @@ public class ChangeLayoutActivity extends AppCompatActivity {
 
                 case DragEvent.ACTION_DROP:
                     int pos = Integer.parseInt(dragEvent.getClipData().getItemAt(0).getText().toString());
-                    String title, msg;
-                    if (buttons.size() >= 8) {
-                        title = "Delete button";
-                        msg = "Are you sure you want to delete this button?";
-                    } else {
-                        title = "Clear button";
-                        msg = "Are you sure you want to remove all media from this button?";
-                    }
-
-                    AlertBox removeButton = new AlertBox(ChangeLayoutActivity.this, title, msg);
-                    removeButton.deleteButton(adapter, buttons, pos);
+                    SpeakButton button = buttons.get(pos);
+                    deletedButtons++;
+                    button.deleteButton();
+                    if (buttons.size() > 8){
+                        buttons.remove(pos);
+                        adapter.notifyItemRemoved(pos);
+                    } else
+                        adapter.notifyItemChanged(pos);
                     return true;
 
                 case DragEvent.ACTION_DRAG_ENDED:
@@ -242,14 +239,14 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                         this,
                         "Keep changes",
                         "Save changes made to all buttons?");
-                keepChanges.gridChanges(buttons, true);
+                keepChanges.gridChanges(buttons, deletedButtons,true);
                 return true;
             case R.id.cancel_changes:
                 AlertBox discardChanges = new AlertBox(
                         adapter.changeLayoutActivity,
                         "Discard changes",
                         "Discard changes made to all buttons?");
-                discardChanges.gridChanges(buttons, false);
+                discardChanges.gridChanges(buttons,deletedButtons, false);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -262,7 +259,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 adapter.changeLayoutActivity,
                 "Discard changes",
                 "Discard changes made to all buttons?");
-        discardChanges.gridChanges(buttons, false);
+        discardChanges.gridChanges(buttons,deletedButtons, false);
     }
 
     //TODO causes the record button to not detect the finger up

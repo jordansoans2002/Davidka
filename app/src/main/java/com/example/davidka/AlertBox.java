@@ -6,14 +6,12 @@ import android.app.Dialog;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.net.Uri;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.widget.ImageView;
 
 import androidx.activity.result.ActivityResultLauncher;
 
-import java.io.File;
 import java.util.List;
 
 public class AlertBox {
@@ -31,7 +29,7 @@ public class AlertBox {
     }
 
     //to confirm that user wants to save/discard changes
-    public void gridChanges(List<SpeakButton> buttons, boolean save) {
+    public void gridChanges(List<SpeakButton> buttons,int deletedButtons, boolean save) {
         AlertDialog.Builder dialog = new AlertDialog.Builder(activity);
         //Setting message manually and performing action on button click can set text from string.xml also
         dialog.setMessage(msg).setTitle(title)
@@ -44,8 +42,7 @@ public class AlertBox {
                             DatabaseHelper db = DatabaseHelper.getDB(activity);
                             for(int i=0;i< buttons.size();i++){
                                 SpeakButton button = buttons.get(i);
-
-                                if(save && (button.rootSpeak.getNext() != null || button.rootPicture.getNext() != null)) {
+                                if(save) {
                                     if(button.rootPicture.getNext() != null) {
                                         button.picture = button.leafPicture.getUri();
                                         button.isVideo = button.leafPicture.isVideo;
@@ -53,27 +50,28 @@ public class AlertBox {
                                     if(button.rootSpeak.getNext() != null) {
                                         button.speak = button.isVideo? null : button.leafSpeak.getUri();
                                     }
-                                    Log.e("save buttons","buttons updated");
                                     button.setPosition(i);
+                                    Log.e("save buttons","pos updates "+i);
                                     db.speakButtonDao().updateSpeakButton(button);
                                 }
 
-                                //root is not null even when there are no updates, deletes all updates including the one we want to save
                                 if(button.rootSpeak.getNext() == null && button.rootPicture.getNext() == null)
                                     continue;
                                 if(button.rootSpeak.getNext() != null) {
                                     Log.e("deleting speak list","current "+button.rootSpeak.getUri()+" leaf "+button.leafSpeak.getUri());
-                                    button.deleteUpdates(activity.getFilesDir(), button.rootSpeak, button.leafSpeak, save);
+                                    button.deleteUpdates(activity.getFilesDir(), button.rootSpeak,  save);
                                 }
                                 if(button.rootPicture.getNext() != null){
                                     Log.e("deleting picture list","current "+button.rootPicture.getUri()+" leaf "+button.leafPicture.getUri());
-                                    if(button.isVideo && save)
+                                    if(button.leafSpeak.getUri()!= null && button.isVideo && save)
                                         SpeakButton.deleteFile(activity.getFilesDir(), button.leafSpeak.getUri(), false);
-                                    if(button.isVideo && !save)
+                                    if(button.leafSpeak.getUri()!= null && button.isVideo && !save)
                                         SpeakButton.deleteFile(activity.getFilesDir(), button.rootSpeak.getUri(), false);
-                                    button.deleteUpdates(activity.getFilesDir(), button.rootPicture, button.leafPicture, save);
+                                    button.deleteUpdates(activity.getFilesDir(), button.rootPicture, save);
                                 }
                             }
+                            for(int i=buttons.size(); i<buttons.size()+deletedButtons;i++)
+                                db.speakButtonDao().deleteButtonByPosition(i);
                             for (SpeakButton button : buttons)
                                 Log.d("table contents", button.position + ". vid? " + button.isVideo + " image:" + button.picture + " speech:" + button.speak);
                         }).start();
@@ -90,6 +88,7 @@ public class AlertBox {
         alert.show();
     }
 
+    //buttons are deleted after the user saves changes
     public void deleteButton(ChangeGridAdapter adapter, List<SpeakButton> buttons, int pos){
         AlertDialog.Builder dialog = new AlertDialog.Builder(activity);
         //Setting message manually and performing action on button click can set text from string.xml also
@@ -99,16 +98,15 @@ public class AlertBox {
                     public void onClick(DialogInterface dialog, int id) {
                         SpeakButton button = buttons.get(pos);
 
-                        //either the root or leaf is not deleted check
                         if(button.rootSpeak.getUri()!=null)
                             SpeakButton.deleteFile(activity.getFilesDir(), button.rootSpeak.getUri(), false);
                         if(button.rootSpeak != button.leafSpeak)
-                            button.deleteUpdates(activity.getFilesDir(),button.rootSpeak,button.leafSpeak,false);
+                            button.deleteUpdates(activity.getFilesDir(),button.rootSpeak,false);
 
                         if(button.rootPicture.getUri()!=null)
                             SpeakButton.deleteFile(activity.getFilesDir(), button.rootPicture.getUri(), button.rootPicture.isVideo);
                         if(button.rootPicture != button.leafPicture)
-                            button.deleteUpdates(activity.getFilesDir(),button.rootPicture,button.leafPicture,false);
+                            button.deleteUpdates(activity.getFilesDir(),button.rootPicture,false);
 
                         DatabaseHelper db = DatabaseHelper.getDB(activity);
                         if(buttons.size()>8) {
@@ -116,11 +114,7 @@ public class AlertBox {
                             buttons.remove(pos);
                             adapter.notifyItemRemoved(pos);
                         } else {
-                            button.setPosition(pos);
-                            button.picture = null;
-                            button.isVideo = false;
-                            button.speak = null;
-                            button.setSpokenText("");
+                            button = new SpeakButton(pos,null,null,"",false);
                             adapter.notifyItemChanged(pos);
                             db.speakButtonDao().updateSpeakButton(button);
                         }
@@ -137,7 +131,7 @@ public class AlertBox {
         alert.show();
     }
 
-    public Intent intentPopup(ActivityResultLauncher<Intent> pickImage){
+    public void intentPopup(ActivityResultLauncher<Intent> pickImage){
         Dialog chooseIntent = new Dialog(activity);
         chooseIntent.setContentView(R.layout.intent_popup);
         chooseIntent.setCanceledOnTouchOutside(true);
@@ -195,7 +189,5 @@ public class AlertBox {
 
         chooseIntent.setTitle(title);
         chooseIntent.show();
-
-        return chooserIntent;
     }
 }

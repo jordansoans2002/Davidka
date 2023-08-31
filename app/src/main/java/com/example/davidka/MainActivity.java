@@ -108,20 +108,17 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (preferences.getBoolean("startupSound", false)) {
-//            MediaPlayer startup = MediaPlayer.create(this, R.raw.startup_sound_davidka);
-//            startup.start();
-//            startup.setOnCompletionListener((mediaPlayer) -> startup.release());
+            MediaPlayer startup = MediaPlayer.create(this, R.raw.startup_sound_davidka);
+            startup.start();
+            startup.setOnCompletionListener((mediaPlayer) -> startup.release());
         }
 
         //TODO check and get all required permissions here
 
         new Thread(() -> {
             DatabaseHelper db = DatabaseHelper.getDB(this);
-            //you can have as many buttons in edit view but only the first 8 will be shown
-//            if (preferences.getBoolean("scrollable", false))
                 MainActivity.buttons = db.speakButtonDao().getAllButtons();
-//            else
-//                MainActivity.buttons = db.speakButtonDao().getTop8();
+
             if (buttons.size() == 0) {
                 for (int i = 0; i < 8; i++) {
                     SpeakButton button = new SpeakButton(i,null,null,"",false);

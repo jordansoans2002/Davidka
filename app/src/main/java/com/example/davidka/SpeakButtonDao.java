@@ -28,6 +28,9 @@ public interface SpeakButtonDao {
 //    @Query("SELECT TOP 8 * FROM SpeakButton WHERE picture = :uri")
 //    int isPicturePresent(String uri);
 
+    @Query("DELETE FROM SpeakButton where position = :position")
+    void deleteButtonByPosition(int position);
+
     @Query("select * from SpeakButton")
     List<SpeakButton> getAllButtons();
 }

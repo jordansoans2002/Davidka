@@ -33,13 +33,13 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.UUID;
 
 public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.ViewHolder> {
     ChangeLayoutActivity changeLayoutActivity;
     MediaRecorder recorder;
     static Boolean longPress = false;
-    static Boolean swap = false;
 
     ActivityResultLauncher<PickVisualMediaRequest> getImage;
     ActivityResultLauncher<Intent> pickAudio;
@@ -72,6 +72,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         SpeakButton button = changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition());
         if (changeLayoutActivity.preferences.getBoolean("showText", false)) {
+//            holder.spoken_text.setText(""+position);
             holder.spoken_text.setText(button.getSpokenText());
             holder.spoken_text.setVisibility(View.VISIBLE);
         } else
@@ -147,12 +148,18 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             return true;
         });
 
+        //TODO if user drags outside view bound recording doesnt stop
+        //TODO set limit on length of audio
         holder.change_audio.setOnTouchListener((@SuppressLint("ClickableViewAccessibility") View view, MotionEvent motionEvent) -> {
             view.onTouchEvent(motionEvent);
             if (MotionEvent.ACTION_UP == motionEvent.getAction())
                 Log.e("long press status", "up");
             if (MotionEvent.ACTION_DOWN == motionEvent.getAction())
                 Log.e("long press status", "down");
+            if (MotionEvent.ACTION_OUTSIDE == motionEvent.getAction())
+                Log.e("long press status", "outside");
+            if (MotionEvent.ACTION_BUTTON_RELEASE == motionEvent.getAction())
+                Log.e("long press status", "release");
 
             if (motionEvent.getAction() == MotionEvent.ACTION_UP && longPress) {
                 Log.e("long press status", "long press released");
@@ -258,8 +265,6 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 
                     }
                 }
-            } catch (SecurityException se) {
-                System.err.println("need uri permission at position " + position);
             } catch (Exception e) {
                 Toast.makeText(holder.itemView.getContext(), "Audio not available for this button", Toast.LENGTH_SHORT)
                         .show();
@@ -270,7 +275,6 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         holder.seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-//                if (holder.speak != null)
                 if (holder.speak != null && b)
                     holder.speak.seekTo(i);
                 else if (holder.video != null && b)
@@ -317,34 +321,37 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             return true;
         }));
 
-//        holder.picture.setOnDragListener((view, dragEvent) -> {
-//            if (dragEvent.getAction() == DragEvent.ACTION_DRAG_ENTERED && !swap) {
-//                int fromPosition = Integer.parseInt(dragEvent.getClipDescription().getLabel().toString());
-//                int toPosition = holder.getAbsoluteAdapterPosition();
-//                if (fromPosition == toPosition)
-//                    return false;
-//                Log.e("button drag enter","pos="+holder.getAbsoluteAdapterPosition()+" swap="+swap);
-//                SpeakButton btn = new SpeakButton(-1);
-//                btn.swap(changeLayoutActivity.buttons.get(fromPosition));
-//                changeLayoutActivity.buttons.get(fromPosition).swap(changeLayoutActivity.buttons.get(toPosition));
-//                changeLayoutActivity.buttons.get(toPosition).swap(btn);
-//                changeLayoutActivity.adapter.notifyItemMoved(fromPosition, toPosition);
-//                swap = true;
-//                return false;
-//            } else if (dragEvent.getAction() == DragEvent.ACTION_DRAG_EXITED) {
-//                int fromPosition = Integer.parseInt(dragEvent.getClipDescription().getLabel().toString());
-//                int toPosition = holder.getAbsoluteAdapterPosition();
-//                if (fromPosition == toPosition)
-//                    return false;
-//                Log.e("button drag exit","pos="+holder.getAbsoluteAdapterPosition()+" swap="+swap);
-//                swap = false;
-//            } else if(dragEvent.getAction() == DragEvent.ACTION_DRAG_ENDED)
-//                swap = false;
-////            else if (dragEvent.getAction() == DragEvent.ACTION_DRAG_ENDED) {
-////                holder.editor_button.setVisibility(View.VISIBLE);
-////            }
-//            return true;
-//        });
+        //TODO make scrolling
+        holder.editor_button.setOnDragListener((view, dragEvent) -> {
+            int fromPosition,toPosition;
+            switch (dragEvent.getAction()) {
+                case DragEvent.ACTION_DRAG_ENTERED:
+                    fromPosition = Integer.parseInt(dragEvent.getClipDescription().getLabel().toString());
+                    toPosition = holder.getAbsoluteAdapterPosition();
+//                    if (fromPosition == toPosition)
+//                        return false;
+                    holder.button_divider.setVisibility(View.VISIBLE);
+                    //todo improve this
+                    int p = toPosition+2<changeLayoutActivity.buttons.size()? toPosition+2 : toPosition-2;
+//                    changeLayoutActivity.edit_grid.smoothScrollToPosition(p);
+                    return true;
+                case DragEvent.ACTION_DRAG_EXITED:
+                    fromPosition = Integer.parseInt(dragEvent.getClipDescription().getLabel().toString());
+                    toPosition = holder.getAbsoluteAdapterPosition();
+//                    if (fromPosition == toPosition)
+//                        return false;
+                    holder.button_divider.setVisibility(View.GONE);
+                    return true;
+                case DragEvent.ACTION_DROP:
+                    fromPosition = Integer.parseInt(dragEvent.getClipDescription().getLabel().toString());
+                    toPosition = holder.getAbsoluteAdapterPosition();
+                    Collections.swap(changeLayoutActivity.buttons,fromPosition,toPosition);
+                    changeLayoutActivity.adapter.notifyItemMoved(fromPosition,toPosition);
+                    holder.button_divider.setVisibility(View.GONE);
+                default:
+                    return true;
+            }
+        });
     }
 
     @Override
@@ -362,6 +369,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         VideoView video;
         MediaPlayer speak;
         EditText spoken_text;
+        View button_divider;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -373,6 +381,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             picture = itemView.findViewById(R.id.picture);
             image = itemView.findViewById(R.id.image);
             video = itemView.findViewById(R.id.video);
+            button_divider = itemView.findViewById(R.id.button_divider);
         }
     }
 }

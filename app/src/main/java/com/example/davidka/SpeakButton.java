@@ -3,7 +3,6 @@ package com.example.davidka;
 import android.net.Uri;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
@@ -22,13 +21,15 @@ public class SpeakButton {
     Boolean isVideo;
 
     @Ignore
-    ButtonUpdate rootSpeak = null;
+    boolean delete;
     @Ignore
-    ButtonUpdate leafSpeak = null;
+    ButtonUpdate rootSpeak;
     @Ignore
-    ButtonUpdate rootPicture = null;
+    ButtonUpdate leafSpeak;
     @Ignore
-    ButtonUpdate leafPicture = null;
+    ButtonUpdate rootPicture;
+    @Ignore
+    ButtonUpdate leafPicture;
 
     public SpeakButton(int position, String speak, String picture, String spokenText, Boolean isVideo) {
         this.position = position;
@@ -56,33 +57,23 @@ public class SpeakButton {
 
     public String getSpeak() {
 //        return speak;
-        if (leafSpeak != null)
-            return leafSpeak.getUri();
-        else
-            return speak;
+        return leafSpeak.getUri();
     }
 
     public void setSpeak(String speak) {
-         if (speak != null) {
-            leafSpeak.setNext(new ButtonUpdate(speak, false));
-            leafSpeak = leafSpeak.getNext();
-        }
+        leafSpeak.setNext(new ButtonUpdate(speak, false));
+        leafSpeak = leafSpeak.getNext();
     }
 
     public String getPicture() {
 //        return picture;
-        if (leafPicture != null)
-            return leafPicture.getUri();
-        else
-            return picture;
+        return leafPicture.getUri();
     }
 
     public void setPicture(String picture, boolean isVideo) {
         this.isVideo = isVideo;
-        if (picture != null) {
-            leafPicture.setNext(new ButtonUpdate(picture, isVideo));
-            leafPicture = leafPicture.getNext();
-        }
+        leafPicture.setNext(new ButtonUpdate(picture, isVideo));
+        leafPicture = leafPicture.getNext();
     }
 
     public String getSpokenText() {
@@ -93,13 +84,20 @@ public class SpeakButton {
         this.spokenText = spokenText;
     }
 
+    //add extra node to end with null so when updates are save all nodes from root leaf
+    public void deleteButton() {
+        delete = true;
+        setPicture(null,false);
+        setSpeak(null);
+    }
+
 //    public void swap(SpeakButton temp){
 //        setSpeak(temp.getSpeak());
 //        setPicture(temp.getPicture(),temp.isVideo);
 //        setSpokenText(temp.getSpokenText());
 //    }
 
-    public void deleteUpdates(File dir, ButtonUpdate root, ButtonUpdate leaf, boolean save) {
+    public void deleteUpdates(File dir, ButtonUpdate root, boolean save) {
         ButtonUpdate current = save ? root : root.getNext();
 
         while ((!save && current != null) || (save && current != null && current.getNext() != null)) {
@@ -111,10 +109,12 @@ public class SpeakButton {
             temp = null;
         }
         root = null;
-        leaf = null;
+        current = null;
     }
 
-    public static void deleteFile(File dir, @NonNull String uri, boolean isExternal) {
+    public static void deleteFile(File dir, String uri, boolean isExternal) {
+        if (uri == null)
+            return;
         if (!isExternal) {
             Log.e("delete file", "delete uri " + uri + " type " + isExternal);
             new File(dir, Uri.parse(uri).getLastPathSegment())
