@@ -38,6 +38,11 @@ public class SpeakButton {
         this.spokenText = spokenText;
         this.isVideo = isVideo;
 
+//        if(speak != null && !new File(Uri.parse(speak).getPath()).isFile())
+//            speak = null;
+//        if(picture != null && !new File(Uri.parse(picture).getPath()).isFile())
+//            picture = null;
+
         rootSpeak = new ButtonUpdate(speak, false);
         leafSpeak = rootSpeak;
 
@@ -90,12 +95,6 @@ public class SpeakButton {
         setPicture(null,false);
         setSpeak(null);
     }
-
-//    public void swap(SpeakButton temp){
-//        setSpeak(temp.getSpeak());
-//        setPicture(temp.getPicture(),temp.isVideo);
-//        setSpokenText(temp.getSpokenText());
-//    }
 
     public void deleteUpdates(File dir, ButtonUpdate root, boolean save) {
         ButtonUpdate current = save ? root : root.getNext();

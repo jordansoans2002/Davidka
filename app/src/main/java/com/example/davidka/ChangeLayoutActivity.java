@@ -29,6 +29,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ImageView;
 
+import com.gowtham.library.utils.TrimType;
 import com.gowtham.library.utils.TrimVideo;
 import com.yalantis.ucrop.UCrop;
 
@@ -49,7 +50,10 @@ public class ChangeLayoutActivity extends AppCompatActivity {
     static Uri temp_uri = null;
     private boolean permissionToRecordAccepted = false;
     static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
+    static final long MIN_VID_DURATION = 2;
+    static final long MAX_VID_DURATION = 30;
     ChangeGridAdapter adapter;
+    GridLayoutManager gridLayoutManager;
     SharedPreferences preferences;
 
 
@@ -86,6 +90,8 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                     TrimVideo.activity(uri.toString())
                             .setHideSeekBar(true)
                             .setAccurateCut(true)
+                            .setTrimType(TrimType.MIN_MAX_DURATION)
+                            .setMinToMax(MIN_VID_DURATION,MAX_VID_DURATION)
                             .start(ChangeLayoutActivity.this, trimVideo);
 
                 }
@@ -108,7 +114,6 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 }
             });
 
-    //TODO set max and min length
     ActivityResultLauncher<Intent> trimVideo = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
@@ -168,13 +173,11 @@ public class ChangeLayoutActivity extends AppCompatActivity {
             new Handler(Looper.getMainLooper()).post(() -> {
                 adapter = new ChangeGridAdapter(this, pickAudio, pickImage);
                 edit_grid.setAdapter(adapter);
-                edit_grid.setLayoutManager(new GridLayoutManager(this, 2));
+                gridLayoutManager = new GridLayoutManager(this, 2);
+                edit_grid.setLayoutManager(gridLayoutManager);
+
             });
         }).start();
-
-        //doesnt allow the mic button to detect long press release
-        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleCallback);
-//        itemTouchHelper.attachToRecyclerView(edit_grid);
 
         add_button.setOnClickListener((view) -> {
             buttons.add(new SpeakButton(buttons.size(),null,null,"",false));
@@ -261,30 +264,4 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 "Discard changes made to all buttons?");
         discardChanges.gridChanges(buttons,deletedButtons, false);
     }
-
-    //TODO causes the record button to not detect the finger up
-    ItemTouchHelper.SimpleCallback simpleCallback = new ItemTouchHelper.SimpleCallback(ItemTouchHelper.DOWN | ItemTouchHelper.UP | ItemTouchHelper.START | ItemTouchHelper.END, 0) {
-        @Override
-        public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
-            if (!ChangeGridAdapter.longPress) {
-                int fromPosition = viewHolder.getAbsoluteAdapterPosition();
-                int toPosition = target.getAbsoluteAdapterPosition();
-
-                Collections.swap(buttons, fromPosition, toPosition);
-//                SpeakButton btn = new SpeakButton(-1);
-//                btn.swap(buttons.get(fromPosition));
-//                buttons.get(fromPosition).swap(buttons.get(toPosition));
-//                buttons.get(toPosition).swap(btn);
-
-                adapter.notifyItemMoved(fromPosition, toPosition);
-            }
-            return false;
-        }
-
-        @Override
-        public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-        }
-
-    };
-
 }

@@ -8,8 +8,9 @@
     android:layout_margin="4dp"
     android:longClickable="true">
 
+<!--        android:layout_width="170dp"-->
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:layout_width="170dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
         <!--        <EditText-->
@@ -140,22 +141,25 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:ems="10"
-            android:hint="Enter text to be spoken"
+            android:hint="@string/edittext_hint"
             android:inputType="textMultiLine"
             android:selectAllOnFocus="true"
             android:singleLine="false"
             android:textSize="14sp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/picture" />
+            app:layout_constraintTop_toBottomOf="@id/picture"
+            tools:visibility="gone" />
 
         <View
             android:id="@+id/button_divider"
             android:layout_width="match_parent"
             android:layout_height="8dp"
             android:background="@color/is_blue_dark"
+            android:elevation="2dp"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
+            app:layout_constraintStart_toStartOf="parent"
+            tools:visibility="visible" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

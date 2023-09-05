@@ -9,6 +9,7 @@ import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
+import android.system.ErrnoException;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -32,6 +33,7 @@ import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.UUID;
@@ -39,6 +41,7 @@ import java.util.UUID;
 public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.ViewHolder> {
     ChangeLayoutActivity changeLayoutActivity;
     MediaRecorder recorder;
+    static final int MAX_AUD_DURATION = 10000;
     static Boolean longPress = false;
 
     ActivityResultLauncher<PickVisualMediaRequest> getImage;
@@ -96,29 +99,45 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             }
         };
 
-        if (button.getPicture() != null && !button.isVideo) {
-            holder.image.setVisibility(View.VISIBLE);
-            holder.image.setImageURI(Uri.parse(button.getPicture()));
-            holder.video.setVisibility(View.GONE);
-        } else if (button.getPicture() != null && button.isVideo) {
-            holder.video.setVisibility(View.VISIBLE);
-            holder.video.setVideoURI(Uri.parse(button.getPicture()));
-            holder.video.seekTo(1);
-            holder.image.setVisibility(View.GONE);
+        try {
+            boolean exists = new File(Uri.parse(button.getPicture()).getPath()).exists();
+            if (exists) {
+                if (!button.isVideo) {
+                    holder.image.setImageURI(Uri.parse(button.getPicture()));
+                    holder.image.setVisibility(View.VISIBLE);
+                    holder.video.setVisibility(View.GONE);
+                } else {
+                    holder.video.setVisibility(View.VISIBLE);
+                    holder.video.setVideoURI(Uri.parse(button.getPicture()));
+                    holder.video.seekTo(1);
+                    holder.image.setVisibility(View.GONE);
 
-            holder.video.setOnPreparedListener(mediaPlayer -> {
-                holder.seekBar.setProgress(0);
-                holder.seekBar.setMax(holder.video.getDuration());
-                updateSeekbarHandler.postDelayed(updateVideo, 100);
-            });
-            holder.video.setOnCompletionListener(mediaPlayer -> {
-                holder.video.seekTo(1);
-                holder.seekBar.setProgress(1);
-                holder.audio_control.setImageResource(R.drawable.baseline_play_arrow_24);
-                updateSeekbarHandler.removeCallbacks(updateVideo);
-            });
+                    holder.video.setOnPreparedListener(mediaPlayer -> {
+                        holder.seekBar.setProgress(0);
+                        holder.seekBar.setMax(holder.video.getDuration());
+                        updateSeekbarHandler.postDelayed(updateVideo, 100);
+                    });
+                    holder.video.setOnCompletionListener(mediaPlayer -> {
+                        holder.video.seekTo(1);
+                        holder.seekBar.setProgress(1);
+                        holder.audio_control.setImageResource(R.drawable.baseline_play_arrow_24);
+                        updateSeekbarHandler.removeCallbacks(updateVideo);
+                    });
+                }
+            } else {
+                Toast.makeText(
+                        holder.itemView.getContext(),
+                        "A media file was not found",
+                        Toast.LENGTH_LONG
+                ).show();
+                throw new NullPointerException();
+            }
+        } catch (NullPointerException nullPointerException) {
+            holder.image.setVisibility(View.VISIBLE);
+            holder.video.setVisibility(View.GONE);
         }
 
+        //TODO tone to indicate record start? and end
         holder.change_audio.setOnLongClickListener((View view) -> {
             Log.e("long press status", "long click detected change audio");
             if (changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).isVideo) {
@@ -136,8 +155,22 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
                 File file = new File(changeLayoutActivity.getFilesDir(), dest_uri);
                 recorder.setOutputFile(file);
                 changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).setSpeak(Uri.fromFile(file).toString());
-
                 recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB);
+                recorder.setMaxDuration(MAX_AUD_DURATION);
+                recorder.setOnInfoListener((mr, what, extra) -> {
+                    if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
+                        recorder.release();
+                        holder.change_audio.setScaleX(1f);
+                        holder.change_audio.setScaleY(1f);
+                        longPress = false;
+                        Toast.makeText(
+                                holder.itemView.getContext(),
+                                "Maximum audio length is 10 seconds",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                    }
+                });
+
                 try {
                     recorder.prepare();
                 } catch (IOException e) {
@@ -148,23 +181,21 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             return true;
         });
 
-        //TODO if user drags outside view bound recording doesnt stop
-        //TODO set limit on length of audio
         holder.change_audio.setOnTouchListener((@SuppressLint("ClickableViewAccessibility") View view, MotionEvent motionEvent) -> {
             view.onTouchEvent(motionEvent);
-            if (MotionEvent.ACTION_UP == motionEvent.getAction())
-                Log.e("long press status", "up");
-            if (MotionEvent.ACTION_DOWN == motionEvent.getAction())
-                Log.e("long press status", "down");
-            if (MotionEvent.ACTION_OUTSIDE == motionEvent.getAction())
-                Log.e("long press status", "outside");
-            if (MotionEvent.ACTION_BUTTON_RELEASE == motionEvent.getAction())
-                Log.e("long press status", "release");
 
-            if (motionEvent.getAction() == MotionEvent.ACTION_UP && longPress) {
+            if ((motionEvent.getAction() == MotionEvent.ACTION_UP || motionEvent.getAction() == MotionEvent.ACTION_CANCEL) && longPress) {
                 Log.e("long press status", "long press released");
-                recorder.stop();
-                recorder.release();
+                try {
+                    recorder.stop();
+                    recorder.release();
+                } catch (RuntimeException runtimeException) {
+                    Toast.makeText(
+                            holder.itemView.getContext(),
+                            "No audio was recorded",
+                            Toast.LENGTH_SHORT
+                    ).show();
+                }
                 holder.change_audio.setScaleX(1f);
                 holder.change_audio.setScaleY(1f);
                 longPress = false;
@@ -174,11 +205,18 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 
         holder.change_audio.setOnClickListener((View view) -> {
             if (changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).isVideo) {
-                Toast.makeText(holder.itemView.getContext(), "Please choose an image to add audio", Toast.LENGTH_SHORT)
-                        .show();
+                Toast.makeText(
+                        holder.itemView.getContext(),
+                        "Please choose an image to add audio",
+                        Toast.LENGTH_SHORT
+                ).show();
             } else
-                Toast.makeText(holder.itemView.getContext(), "Press and hold to record", Toast.LENGTH_SHORT)
-                        .show();
+                Toast.makeText(
+                        holder.itemView.getContext(),
+                        "Press and hold to record",
+                         Toast.LENGTH_SHORT
+                ).show();
+
             //TODO make the audio file selected to persist
 //            Intent chooseAudio = new Intent();
 //            chooseAudio.setType("audio/*");
@@ -218,7 +256,6 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
                     String speakUri = changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).getSpeak();
                     if (holder.speak != null)
                         holder.speak.release();
-                    Log.e("media player init", speakUri);
                     holder.speak = MediaPlayer.create(holder.audio_control.getContext(), Uri.parse(speakUri));
                     holder.speak.setOnPreparedListener(mediaPlayer -> {
                         holder.seekBar.setProgress(0);
@@ -308,46 +345,45 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         });
 
         holder.picture.setOnLongClickListener((view -> {
-            ClipData.Item pos = new ClipData.Item(holder.getAbsoluteAdapterPosition()+"");
-            ClipData.Item viewId = new ClipData.Item(view.getId()+"");
-            ClipDescription description = new ClipDescription(holder.getBindingAdapterPosition()+"",new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN});
-            ClipData clipData = new ClipData(description,pos);
+            ClipData.Item pos = new ClipData.Item(holder.getAbsoluteAdapterPosition() + "");
+            ClipData.Item viewId = new ClipData.Item(view.getId() + "");
+            ClipDescription description = new ClipDescription(holder.getBindingAdapterPosition() + "", new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN});
+            ClipData clipData = new ClipData(description, pos);
             clipData.addItem(viewId);
 
             View.DragShadowBuilder dragShadowBuilder = new View.DragShadowBuilder(holder.editor_button);
             view.startDragAndDrop(clipData, dragShadowBuilder, holder.editor_button, 0);
-            //todo button doesnt reappear
-//            holder.editor_button.setVisibility(View.INVISIBLE);
             return true;
         }));
 
-        //TODO make scrolling
         holder.editor_button.setOnDragListener((view, dragEvent) -> {
-            int fromPosition,toPosition;
+            int fromPosition, toPosition;
+            RecyclerView.SmoothScroller smoothScroller;
             switch (dragEvent.getAction()) {
                 case DragEvent.ACTION_DRAG_ENTERED:
                     fromPosition = Integer.parseInt(dragEvent.getClipDescription().getLabel().toString());
                     toPosition = holder.getAbsoluteAdapterPosition();
-//                    if (fromPosition == toPosition)
-//                        return false;
+                    if (fromPosition == toPosition)
+                        return false;
+                    if (holder.button_divider.getVisibility() == View.VISIBLE)
+                        return true;
                     holder.button_divider.setVisibility(View.VISIBLE);
-                    //todo improve this
-                    int p = toPosition+2<changeLayoutActivity.buttons.size()? toPosition+2 : toPosition-2;
-//                    changeLayoutActivity.edit_grid.smoothScrollToPosition(p);
+                    smoothScroller = new CenterSmoothScroller(changeLayoutActivity.edit_grid.getContext());
+                    smoothScroller.setTargetPosition(toPosition);
+                    changeLayoutActivity.gridLayoutManager.startSmoothScroll(smoothScroller);
                     return true;
                 case DragEvent.ACTION_DRAG_EXITED:
-                    fromPosition = Integer.parseInt(dragEvent.getClipDescription().getLabel().toString());
-                    toPosition = holder.getAbsoluteAdapterPosition();
-//                    if (fromPosition == toPosition)
-//                        return false;
                     holder.button_divider.setVisibility(View.GONE);
                     return true;
                 case DragEvent.ACTION_DROP:
                     fromPosition = Integer.parseInt(dragEvent.getClipDescription().getLabel().toString());
                     toPosition = holder.getAbsoluteAdapterPosition();
-                    Collections.swap(changeLayoutActivity.buttons,fromPosition,toPosition);
-                    changeLayoutActivity.adapter.notifyItemMoved(fromPosition,toPosition);
+                    Collections.swap(changeLayoutActivity.buttons, fromPosition, toPosition);
+                    changeLayoutActivity.adapter.notifyItemMoved(fromPosition, toPosition);
                     holder.button_divider.setVisibility(View.GONE);
+                    smoothScroller = new CenterSmoothScroller(changeLayoutActivity.edit_grid.getContext());
+                    smoothScroller.setTargetPosition(toPosition);
+                    changeLayoutActivity.gridLayoutManager.startSmoothScroll(smoothScroller);
                 default:
                     return true;
             }
