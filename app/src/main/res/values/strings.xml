@@ -15,4 +15,6 @@
     </string>
     <string name="attachment_summary_off">Only download attachments when manually requested</string>
     <string name="edittext_hint">Enter text to be spoken</string>
+    <string name="button_description">Contains a video or a picture with recorded audio. When pressed the video or audio starts playing</string>
+    <string name="image_selector_description">Click to select an image or a video.</string>
 </resources>

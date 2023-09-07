@@ -12,6 +12,7 @@ import android.os.Looper;
 import android.system.ErrnoException;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.DragEvent;
 import android.view.LayoutInflater;
@@ -21,6 +22,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.Toast;
 import android.widget.VideoView;
@@ -30,6 +32,7 @@ import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
@@ -62,11 +65,17 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 //        });
     }
 
+    //TODO responsive image
     @NonNull
     @Override
     public ChangeGridAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.edit_button, parent, false);
+        int h = changeLayoutActivity.edit_grid.getHeight();
+        int w = changeLayoutActivity.edit_grid.getWidth();
+        Log.e("Picture",pxToDp(w)+"x"+pxToDp(h));
+        CardView container = view.findViewById(R.id.picture);
+//        container.setLayoutParams(new CardView.LayoutParams(w/2-40,w/2-40/));
         return new ViewHolder(view);
     }
 
@@ -75,7 +84,6 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         SpeakButton button = changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition());
         if (changeLayoutActivity.preferences.getBoolean("showText", false)) {
-//            holder.spoken_text.setText(""+position);
             holder.spoken_text.setText(button.getSpokenText());
             holder.spoken_text.setVisibility(View.VISIBLE);
         } else
@@ -393,6 +401,12 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
     @Override
     public int getItemCount() {
         return changeLayoutActivity.buttons.size();
+    }
+
+    public int pxToDp(int px) {
+        DisplayMetrics displayMetrics = changeLayoutActivity.getResources().getDisplayMetrics();
+        int dp = Math.round(px / (displayMetrics.xdpi / DisplayMetrics.DENSITY_DEFAULT));
+        return dp;
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {

@@ -1,14 +1,8 @@
 package com.example.davidka;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.preference.PreferenceFragmentCompat;
-
 import android.os.Bundle;
-import android.preference.PreferenceActivity;
-import android.view.Menu;
-import android.view.MenuItem;
 
 public class SettingsActivity extends AppCompatActivity {
 

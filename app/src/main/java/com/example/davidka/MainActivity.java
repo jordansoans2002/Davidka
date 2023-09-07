@@ -46,16 +46,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Log.e("pref", "get pref");
-
         picture_grid = findViewById(R.id.picture_grid);
-
-        //preferences are loaded after onResume
-//        if (preferences.getBoolean("startupSound", false)) {
-//            MediaPlayer startup = MediaPlayer.create(this, R.raw.startup_sound_davidka);
-//            startup.start();
-//            startup.setOnCompletionListener((mediaPlayer) -> startup.release());
-//        }
     }
 
     ActivityResultLauncher<Intent> getPermission = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
@@ -110,6 +101,7 @@ public class MainActivity extends AppCompatActivity {
         if (preferences.getBoolean("startupSound", false)) {
             MediaPlayer startup = MediaPlayer.create(this, R.raw.startup_sound_davidka);
             startup.start();
+            Log.e("startup sound check",""+startup.isPlaying()+" "+startup.getDuration());
             startup.setOnCompletionListener((mediaPlayer) -> startup.release());
         }
 

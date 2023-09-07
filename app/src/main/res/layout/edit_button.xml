@@ -8,28 +8,20 @@
     android:layout_margin="4dp"
     android:longClickable="true">
 
-<!--        android:layout_width="170dp"-->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <!--        <EditText-->
-        <!--            android:id="@+id/editTextTextMultiLine"-->
-        <!--            android:layout_width="wrap_content"-->
-        <!--            android:layout_height="wrap_content"-->
-        <!--            android:ems="10"-->
-        <!--            android:gravity="start|top"-->
-        <!--            android:inputType="textMultiLine" />-->
-
         <ImageView
             android:id="@+id/audio_control"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginStart="-8dp"
             android:layout_marginTop="8dp"
             app:layout_constraintStart_toStartOf="@+id/spoken_text"
             app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@drawable/baseline_play_arrow_24" />
+            app:srcCompat="@drawable/baseline_play_arrow_24"
+            android:contentDescription="@string/image_selector_description" />
 
         <SeekBar
             android:id="@+id/seekBar"
@@ -58,19 +50,10 @@
             app:layout_constraintEnd_toEndOf="@+id/spoken_text"
             app:layout_constraintTop_toTopOf="@+id/seekBar" />
 
-        <!--        <ImageView-->
-        <!--            android:id="@+id/change_audio"-->
-        <!--            android:layout_width="40dp"-->
-        <!--            android:layout_height="40dp"-->
-        <!--            app:layout_constraintBottom_toBottomOf="@+id/seekBar"-->
-        <!--            app:layout_constraintEnd_toEndOf="@+id/spoken_text"-->
-        <!--            app:layout_constraintTop_toTopOf="@+id/seekBar"-->
-        <!--            app:srcCompat="@drawable/baseline_mic_24" />-->
-
         <androidx.cardview.widget.CardView
             android:id="@+id/picture"
-            android:layout_width="160dp"
-            android:layout_height="160dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:layout_marginTop="8dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -78,7 +61,7 @@
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="160dp"
                 android:layout_gravity="center|fill"
                 android:orientation="vertical">
 
@@ -102,37 +85,18 @@
                     android:id="@+id/image"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
+                    android:contentDescription="@string/image_selector_description"
                     android:foreground="@drawable/baseline_add_a_photo_24"
                     android:foregroundGravity="center"
                     android:scaleType="centerInside"
+                    android:layout_alignParentStart="true"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentEnd="true"
+                    android:layout_alignParentBottom="true"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
             </androidx.constraintlayout.widget.ConstraintLayout>
-
-            <!--            <VideoView-->
-            <!--                android:id="@+id/video"-->
-            <!--                android:layout_width="match_parent"-->
-            <!--                android:layout_height="match_parent"-->
-            <!--                android:layout_alignParentStart="true"-->
-            <!--                android:layout_alignParentTop="true"-->
-            <!--                android:layout_alignParentEnd="true"-->
-            <!--                android:layout_alignParentBottom="true"-->
-            <!--                android:layout_gravity="fill"-->
-            <!--                android:foreground="@drawable/baseline_add_a_photo_24"-->
-            <!--                android:foregroundGravity="center"-->
-            <!--                android:scaleType="centerInside" />-->
-
-            <!--            <ImageView-->
-            <!--                android:id="@+id/image"-->
-            <!--                android:layout_width="match_parent"-->
-            <!--                android:layout_height="match_parent"-->
-            <!--                android:layout_gravity="fill"-->
-            <!--                android:foreground="@drawable/baseline_add_a_photo_24"-->
-            <!--                android:foregroundGravity="center"-->
-            <!--                android:scaleType="centerInside"-->
-            <!--                app:srcCompat="@drawable/folded_hands" />-->
-
         </androidx.cardview.widget.CardView>
 
         <EditText
@@ -148,7 +112,8 @@
             android:textSize="14sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/picture"
-            tools:visibility="gone" />
+            tools:visibility="gone"
+            android:autofillHints="sentence" />
 
         <View
             android:id="@+id/button_divider"

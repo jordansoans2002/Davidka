@@ -197,7 +197,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                     return true;
 
                 case DragEvent.ACTION_DRAG_ENTERED:
-                    add_button.setScaleY(1.3f);
+                    add_button.setScaleY(1.2f);
                     return true;
 
                 case DragEvent.ACTION_DRAG_EXITED:
@@ -206,6 +206,8 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                     return true;
 
                 case DragEvent.ACTION_DROP:
+                    add_button.setScaleX(1f);
+                    add_button.setScaleY(1f);
                     int pos = Integer.parseInt(dragEvent.getClipData().getItemAt(0).getText().toString());
                     SpeakButton button = buttons.get(pos);
                     deletedButtons++;
@@ -220,6 +222,8 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                 case DragEvent.ACTION_DRAG_ENDED:
                     add_button_image.setImageResource(R.drawable.baseline_add_24);
                     add_button_image.setBackgroundColor(Color.WHITE);
+                    add_button.setScaleX(1f);
+                    add_button.setScaleY(1f);
                     return true;
 
                 default:

@@ -2,24 +2,27 @@ package com.example.davidka;
 
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.ViewHolder> {
+
     MainActivity mainActivity;
     List<SpeakButton> buttons;
 
@@ -30,16 +33,22 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
         this.buttons = buttons;
     }
 
+    //TODO image is shifted right by 1or 2 dp
     @NonNull
     @Override
     public PictureGridAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.button, parent, false);
+        int h = mainActivity.picture_grid.getHeight();
+        int w = mainActivity.picture_grid.getWidth();
+        ConstraintLayout container = view.findViewById(R.id.container);
+        container.setLayoutParams(new LinearLayout.LayoutParams(w/2+10,h/4-15));
         return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull PictureGridAdapter.ViewHolder holder, int position) {
+
         SpeakButton button = buttons.get(holder.getAbsoluteAdapterPosition());
         String imgUri = button.getPicture();
         try {
@@ -70,7 +79,7 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
                 holder.img.setImageResource(R.mipmap.ic_launcher);
         }
 
-        if (mainActivity.preferences.getBoolean("showText", false)) {
+        if (mainActivity.preferences.getBoolean("showText", false) && button.getSpokenText().length() > 0) {
             holder.txt.setText(button.getSpokenText());
             holder.txt.setVisibility(View.VISIBLE);
         } else
@@ -140,8 +149,15 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
             return 8;
     }
 
+    public int pxToDp(int px) {
+        DisplayMetrics displayMetrics = mainActivity.getResources().getDisplayMetrics();
+        int dp = Math.round(px / (displayMetrics.xdpi / DisplayMetrics.DENSITY_DEFAULT));
+        return dp;
+    }
+
     public class ViewHolder extends RecyclerView.ViewHolder {
         CardView picture;
+        ConstraintLayout container;
         ImageView img;
         VideoView vid;
         TextView txt;
@@ -149,6 +165,7 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             picture = itemView.findViewById(R.id.picture);
+            container = itemView.findViewById(R.id.container);
             img = itemView.findViewById(R.id.img);
             vid = itemView.findViewById(R.id.vid);
             txt = itemView.findViewById(R.id.txt);
