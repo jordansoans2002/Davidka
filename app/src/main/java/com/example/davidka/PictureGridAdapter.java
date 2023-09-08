@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
@@ -17,6 +18,7 @@ import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.room.Database;
 
 import java.io.File;
 import java.util.List;
@@ -33,22 +35,22 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
         this.buttons = buttons;
     }
 
-    //TODO image is shifted right by 1or 2 dp
     @NonNull
     @Override
     public PictureGridAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.button, parent, false);
+
         int h = mainActivity.picture_grid.getHeight();
         int w = mainActivity.picture_grid.getWidth();
         ConstraintLayout container = view.findViewById(R.id.container);
-        container.setLayoutParams(new LinearLayout.LayoutParams(w/2+10,h/4-15));
+        container.setLayoutParams(new LinearLayout.LayoutParams(w / 2 + 10, h / 4 - 15));
+
         return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull PictureGridAdapter.ViewHolder holder, int position) {
-
         SpeakButton button = buttons.get(holder.getAbsoluteAdapterPosition());
         String imgUri = button.getPicture();
         try {
@@ -71,10 +73,13 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
                         "A media file is missing",
                         Toast.LENGTH_LONG
                 ).show();
-                //TODO crate query to delete by uri from the database
+                new Thread(() -> {
+                    DatabaseHelper db = DatabaseHelper.getDB(mainActivity);
+                    db.speakButtonDao().updateSpeakButton(new SpeakButton(position, button.getSpeak(), null, button.getSpokenText(), false));
+                }).start();
                 throw new NullPointerException();
             }
-        }catch (NullPointerException nullPointerException){
+        } catch (NullPointerException nullPointerException) {
             if (!mainActivity.preferences.getBoolean("blankButton", false))
                 holder.img.setImageResource(R.mipmap.ic_launcher);
         }
@@ -108,13 +113,13 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
                                 "Audio file is missing",
                                 Toast.LENGTH_LONG
                         ).show();
-                        new Thread(()->{
+                        new Thread(() -> {
                             DatabaseHelper db = DatabaseHelper.getDB(holder.picture.getContext());
                             button.speak = null;
                             db.speakButtonDao().updateSpeakButton(button);
                         }).start();
                     }
-                }catch (NullPointerException nullPointerException) {
+                } catch (NullPointerException nullPointerException) {
                     Toast.makeText(
                             holder.itemView.getContext(),
                             "Audio not available for this button",
