@@ -17,7 +17,7 @@ public class SpeakButton {
 
     String speak;
     String picture;
-    String spokenText = "";
+    String spokenText;
     Boolean isVideo;
 
     @Ignore
@@ -49,12 +49,6 @@ public class SpeakButton {
         rootPicture = new ButtonUpdate(picture, isVideo);
         leafPicture = rootPicture;
     }
-
-//    @Ignore
-//    public SpeakButton(int position) {
-//        this.position = position;
-//        isVideo = false;
-//    }
 
     public void setPosition(int position) {
         this.position = position;

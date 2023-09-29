@@ -1,4 +1,4 @@
-package com.example.davidka;
+        package com.example.davidka;
 
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -9,7 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.TableRow;
+import android.widget.MediaController;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
@@ -18,7 +18,6 @@ import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.room.Database;
 
 import java.io.File;
 import java.util.List;
@@ -63,7 +62,12 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
                 } else {
                     holder.vid.setVideoURI(Uri.parse(imgUri));
                     holder.vid.setVisibility(View.VISIBLE);
-                    holder.vid.seekTo(1);
+
+                    MediaController mediaController = new MediaController(mainActivity);
+                    mediaController.setVisibility(View.GONE);
+                    holder.vid.setMediaController(mediaController);
+
+                    holder.vid.setOnPreparedListener((mediaPlayer) -> holder.vid.seekTo(1));
                     holder.vid.setOnCompletionListener((mediaPlayer -> holder.vid.seekTo(1)));
                     holder.img.setVisibility(View.GONE);
                 }
@@ -91,6 +95,7 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
             holder.txt.setVisibility(View.GONE);
 
         holder.picture.setOnClickListener((View view) -> {
+            Log.e("vid","pressed");
             if (!buttons.get(holder.getAbsoluteAdapterPosition()).isVideo) {
                 String speakUri = button.getSpeak();
                 try {
@@ -98,14 +103,17 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
                     if (exists) {
                         if (mainActivity.video != null && mainActivity.video.isPlaying()) {
                             mainActivity.video.seekTo(1);
-                            mainActivity.video.pause();
+                            mainActivity.video.stopPlayback();
                         }
 
                         if (mainActivity.speak != null)
                             mainActivity.speak.release();
 
                         mainActivity.speak = MediaPlayer.create(holder.img.getContext(), Uri.parse(speakUri));
-                        mainActivity.speak.setOnCompletionListener((MediaPlayer::release));
+                        mainActivity.speak.setOnCompletionListener((mediaplayer) -> {
+                            mediaplayer.reset();
+                            mediaplayer.release();
+                        });
                         mainActivity.speak.start();
                     } else {
                         Toast.makeText(
@@ -129,7 +137,6 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
             } else {
                 if (mainActivity.speak != null)
                     mainActivity.speak.release();
-
                 if (mainActivity.video == null || !mainActivity.video.isPlaying()) {
                     mainActivity.video = holder.vid;
                     holder.vid.start();
@@ -156,8 +163,7 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
 
     public int pxToDp(int px) {
         DisplayMetrics displayMetrics = mainActivity.getResources().getDisplayMetrics();
-        int dp = Math.round(px / (displayMetrics.xdpi / DisplayMetrics.DENSITY_DEFAULT));
-        return dp;
+        return Math.round(px / (displayMetrics.xdpi / DisplayMetrics.DENSITY_DEFAULT));
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {

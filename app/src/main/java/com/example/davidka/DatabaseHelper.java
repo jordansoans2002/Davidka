@@ -21,9 +21,5 @@ public abstract class DatabaseHelper  extends RoomDatabase {
         return instance;
     }
 
-    public static boolean isStartUp(){
-        return instance == null;
-    }
-
     public abstract SpeakButtonDao speakButtonDao();
 }

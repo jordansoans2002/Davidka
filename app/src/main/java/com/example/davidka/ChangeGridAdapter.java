@@ -4,16 +4,16 @@ import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipDescription;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
+import android.Manifest;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
-import android.system.ErrnoException;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.DragEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -22,23 +22,20 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.Toast;
 import android.widget.VideoView;
 
 import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.PickVisualMediaRequest;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
-import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.UUID;
 
 public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.ViewHolder> {
@@ -47,22 +44,12 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
     static final int MAX_AUD_DURATION = 10000;
     static Boolean longPress = false;
 
-    ActivityResultLauncher<PickVisualMediaRequest> getImage;
     ActivityResultLauncher<Intent> pickAudio;
     ActivityResultLauncher<Intent> pickImage;
 
-    public ChangeGridAdapter(ChangeLayoutActivity changeLayoutActivity, ActivityResultLauncher<Intent> pickAudio, ActivityResultLauncher<Intent> pickImage) {
+    public ChangeGridAdapter(ChangeLayoutActivity changeLayoutActivity, ActivityResultLauncher<Intent> pickImage) {
         this.changeLayoutActivity = changeLayoutActivity;
-        this.pickAudio = pickAudio;
         this.pickImage = pickImage;
-//        this.getImage = changeLayoutActivity.registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
-//            if (uri != null) {
-//                Log.d("PhotoPicker", "Selected URI: " + uri);
-//
-//            } else {
-//                Log.d("PhotoPicker", "No media selected");
-//            }
-//        });
     }
 
     //TODO responsive image
@@ -71,11 +58,6 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
     public ChangeGridAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.edit_button, parent, false);
-        int h = changeLayoutActivity.edit_grid.getHeight();
-        int w = changeLayoutActivity.edit_grid.getWidth();
-        Log.e("Picture",pxToDp(w)+"x"+pxToDp(h));
-        CardView container = view.findViewById(R.id.picture);
-//        container.setLayoutParams(new CardView.LayoutParams(w/2-40,w/2-40/));
         return new ViewHolder(view);
     }
 
@@ -93,22 +75,26 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         Runnable updateVideo = new Runnable() {
             @Override
             public void run() {
-                long currentPosition = holder.video.getCurrentPosition();
-                holder.seekBar.setProgress((int) currentPosition);
-                updateSeekbarHandler.postDelayed(this, 100);
+                if (holder.video != null) {
+                    long currentPosition = holder.video.getCurrentPosition();
+                    holder.seekBar.setProgress((int) currentPosition);
+                    updateSeekbarHandler.postDelayed(this, 100);
+                }
             }
         };
         Runnable updateAudio = new Runnable() {
             @Override
             public void run() {
-                long currentPosition = holder.speak.getCurrentPosition();
-                holder.seekBar.setProgress((int) currentPosition);
-                updateSeekbarHandler.postDelayed(this, 100);
+                if (holder.speak != null) {
+                    long currentPosition = holder.speak.getCurrentPosition();
+                    holder.seekBar.setProgress((int) currentPosition);
+                    updateSeekbarHandler.postDelayed(this, 100);
+                }
             }
         };
 
         try {
-            boolean exists = new File(Uri.parse(button.getPicture()).getPath()).exists();
+            boolean exists = new File(Objects.requireNonNull(Uri.parse(button.getPicture()).getPath())).exists();
             if (exists) {
                 if (!button.isVideo) {
                     holder.image.setImageURI(Uri.parse(button.getPicture()));
@@ -117,11 +103,11 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
                 } else {
                     holder.video.setVisibility(View.VISIBLE);
                     holder.video.setVideoURI(Uri.parse(button.getPicture()));
-                    holder.video.seekTo(1);
                     holder.image.setVisibility(View.GONE);
 
                     holder.video.setOnPreparedListener(mediaPlayer -> {
                         holder.seekBar.setProgress(0);
+                        holder.video.seekTo(1);
                         holder.seekBar.setMax(holder.video.getDuration());
                         updateSeekbarHandler.postDelayed(updateVideo, 100);
                     });
@@ -129,7 +115,6 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
                         holder.video.seekTo(1);
                         holder.seekBar.setProgress(1);
                         holder.audio_control.setImageResource(R.drawable.baseline_play_arrow_24);
-                        updateSeekbarHandler.removeCallbacks(updateVideo);
                     });
                 }
             } else {
@@ -147,53 +132,63 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 
         //TODO tone to indicate record start? and end
         holder.change_audio.setOnLongClickListener((View view) -> {
-            Log.e("long press status", "long click detected change audio");
-            if (changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).isVideo) {
-                Toast.makeText(holder.itemView.getContext(), "Please choose an image to add audio", Toast.LENGTH_SHORT)
-                        .show();
-            } else {
-                longPress = true;
-                holder.change_audio.setScaleX(1.2f);
-                holder.change_audio.setScaleY(1.2f);
-                recorder = new MediaRecorder();
-                recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-                recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+            if (ContextCompat.checkSelfPermission(changeLayoutActivity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                if (changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).isVideo) {
+                    Toast.makeText(holder.itemView.getContext(), "Please choose an image to add audio", Toast.LENGTH_SHORT)
+                            .show();
+                } else {
+                    longPress = true;
+                    holder.change_audio.setScaleX(1.2f);
+                    holder.change_audio.setScaleY(1.2f);
+                    recorder = new MediaRecorder();
+                    recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+                    recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
 
-                String dest_uri = UUID.randomUUID().toString() + ".mp3";
-                File file = new File(changeLayoutActivity.getFilesDir(), dest_uri);
-                recorder.setOutputFile(file);
-                changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).setSpeak(Uri.fromFile(file).toString());
-                recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB);
-                recorder.setMaxDuration(MAX_AUD_DURATION);
-                recorder.setOnInfoListener((mr, what, extra) -> {
-                    if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
-                        recorder.release();
-                        holder.change_audio.setScaleX(1f);
-                        holder.change_audio.setScaleY(1f);
-                        longPress = false;
+                    String dest_uri = UUID.randomUUID().toString() + ".mp3";
+                    File file = new File(changeLayoutActivity.getFilesDir(), dest_uri);
+                    recorder.setOutputFile(file);
+                    changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).setSpeak(Uri.fromFile(file).toString());
+                    recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB);
+                    recorder.setMaxDuration(MAX_AUD_DURATION);
+                    recorder.setOnInfoListener((mr, what, extra) -> {
+                        if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
+                            recorder.release();
+                            holder.change_audio.setScaleX(1f);
+                            holder.change_audio.setScaleY(1f);
+                            longPress = false;
+                            Toast.makeText(
+                                    holder.itemView.getContext(),
+                                    "Maximum audio length is 10 seconds",
+                                    Toast.LENGTH_SHORT
+                            ).show();
+                        }
+                    });
+
+                    try {
+                        recorder.prepare();
+                    } catch (IOException e) {
                         Toast.makeText(
-                                holder.itemView.getContext(),
-                                "Maximum audio length is 10 seconds",
-                                Toast.LENGTH_SHORT
+                                changeLayoutActivity,
+                                "Pleases try recording again",
+                                Toast.LENGTH_LONG
                         ).show();
                     }
-                });
-
-                try {
-                    recorder.prepare();
-                } catch (IOException e) {
-                    Log.e("create recorder", "prepare() failed");
+                    recorder.start();
                 }
-                recorder.start();
+            } else {
+                Toast.makeText(
+                        changeLayoutActivity,
+                        "Please allow permission to use microphone to record audio",
+                        Toast.LENGTH_LONG
+                ).show();
+                changeLayoutActivity.requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, ChangeLayoutActivity.REQUEST_RECORD_AUDIO_PERMISSION);
             }
             return true;
         });
 
         holder.change_audio.setOnTouchListener((@SuppressLint("ClickableViewAccessibility") View view, MotionEvent motionEvent) -> {
             view.onTouchEvent(motionEvent);
-
             if ((motionEvent.getAction() == MotionEvent.ACTION_UP || motionEvent.getAction() == MotionEvent.ACTION_CANCEL) && longPress) {
-                Log.e("long press status", "long press released");
                 try {
                     recorder.stop();
                     recorder.release();
@@ -222,7 +217,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
                 Toast.makeText(
                         holder.itemView.getContext(),
                         "Press and hold to record",
-                         Toast.LENGTH_SHORT
+                        Toast.LENGTH_SHORT
                 ).show();
 
             //TODO make the audio file selected to persist
@@ -249,12 +244,6 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
         holder.picture.setOnClickListener((View view) -> {
             AlertBox intentPopup = new AlertBox(changeLayoutActivity, "Choose media type", "Insert image or video");
             ChangeLayoutActivity.pos = holder.getAbsoluteAdapterPosition();
-
-            //images and video but cannot click using camera
-//            getImage.launch(new PickVisualMediaRequest.Builder()
-//                    .setMediaType(ActivityResultContracts.PickVisualMedia.ImageAndVideo.INSTANCE)
-//                    .build());
-
             intentPopup.intentPopup(pickImage);
         });
 
@@ -262,58 +251,45 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             try {
                 if (!changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).isVideo) {
                     String speakUri = changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).getSpeak();
-                    if (holder.speak != null)
-                        holder.speak.release();
-                    holder.speak = MediaPlayer.create(holder.audio_control.getContext(), Uri.parse(speakUri));
-                    holder.speak.setOnPreparedListener(mediaPlayer -> {
-                        holder.seekBar.setProgress(0);
-                        holder.seekBar.setMax(holder.speak.getDuration());
-                        updateSeekbarHandler.postDelayed(updateAudio, 100);
-                    });
-                    holder.speak.setOnCompletionListener((mediaPlayer -> {
-                        holder.speak.release();
-                        holder.seekBar.setProgress(0);
-                        holder.audio_control.setImageResource(R.drawable.baseline_play_arrow_24);
-                        updateSeekbarHandler.removeCallbacks(updateAudio);
-                    }));
-
-                    if (holder.speak.isPlaying()) {
+                    if (holder.speak != null && holder.speak.isPlaying()) {
                         holder.speak.pause();
                         holder.audio_control.setImageResource(R.drawable.baseline_play_arrow_24);
-                        //to resume use pause
-                        //to restart
-//                    speak.release();
-//                    holder.seekBar.setProgress(0);
+                    } else if (holder.speak == null) {
+
+                        holder.speak = MediaPlayer.create(holder.audio_control.getContext(), Uri.parse(speakUri));
+                        holder.speak.setOnPreparedListener(mediaPlayer -> {
+                            holder.seekBar.setProgress(0);
+                            holder.seekBar.setMax(holder.speak.getDuration());
+                            updateSeekbarHandler.postDelayed(updateAudio, 100);
+                        });
+                        holder.speak.setOnCompletionListener((mediaPlayer -> {
+                            holder.speak.release();
+                            holder.speak = null;
+                            holder.seekBar.setProgress(0);
+                            holder.audio_control.setImageResource(R.drawable.baseline_play_arrow_24);
+                        }));
+
+                        holder.speak.start();
+                        holder.audio_control.setImageResource(R.drawable.baseline_pause_24);
                     } else {
                         holder.speak.start();
                         holder.audio_control.setImageResource(R.drawable.baseline_pause_24);
-//                        holder.seekBar.setMax(holder.speak.getDuration() / 100);
-////                    new Timer().scheduleAtFixedRate(()->{
-////                        holder.seekBar.setProgress(holder.speak.getCurrentPosition());
-////                    },0,100);
                     }
                 } else if (changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).isVideo) {
                     if (holder.video.isPlaying()) {
-                        //to resume use pause
                         holder.video.pause();
-                        //to restart
-//                        holder.video.stopPlayback();
-//                    holder.seekBar.setProgress(0);
                         holder.audio_control.setImageResource(R.drawable.baseline_play_arrow_24);
                     } else {
                         holder.video.start();
                         holder.audio_control.setImageResource(R.drawable.baseline_pause_24);
-//                        holder.seekBar.setMax(holder.video.getDuration() / 100);
-//                    new Timer().scheduleAtFixedRate(()->{
-//                        holder.seekBar.setProgress(holder.speak.getCurrentPosition());
-//                    },0,100);
-
                     }
                 }
             } catch (Exception e) {
-                Toast.makeText(holder.itemView.getContext(), "Audio not available for this button", Toast.LENGTH_SHORT)
-                        .show();
-                e.printStackTrace();
+                Toast.makeText(
+                        holder.itemView.getContext(),
+                        "Audio not available for this button",
+                        Toast.LENGTH_SHORT
+                ).show();
             }
         });
 
@@ -337,22 +313,26 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             }
         });
 
-        holder.spoken_text.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-            }
+        holder.spoken_text.addTextChangedListener(new
 
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).setSpokenText(holder.spoken_text.getText().toString());
-            }
+                                                          TextWatcher() {
+                                                              @Override
+                                                              public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                                                              }
 
-            @Override
-            public void afterTextChanged(Editable editable) {
-            }
-        });
+                                                              @Override
+                                                              public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                                                                  changeLayoutActivity.buttons.get(holder.getAbsoluteAdapterPosition()).setSpokenText(holder.spoken_text.getText().toString());
+                                                              }
 
-        holder.picture.setOnLongClickListener((view -> {
+                                                              @Override
+                                                              public void afterTextChanged(Editable editable) {
+                                                              }
+                                                          });
+
+        holder.picture.setOnLongClickListener((view ->
+
+        {
             ClipData.Item pos = new ClipData.Item(holder.getAbsoluteAdapterPosition() + "");
             ClipData.Item viewId = new ClipData.Item(view.getId() + "");
             ClipDescription description = new ClipDescription(holder.getBindingAdapterPosition() + "", new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN});
@@ -364,7 +344,9 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
             return true;
         }));
 
-        holder.editor_button.setOnDragListener((view, dragEvent) -> {
+        holder.editor_button.setOnDragListener((view, dragEvent) ->
+
+        {
             int fromPosition, toPosition;
             RecyclerView.SmoothScroller smoothScroller;
             switch (dragEvent.getAction()) {
@@ -405,8 +387,7 @@ public class ChangeGridAdapter extends RecyclerView.Adapter<ChangeGridAdapter.Vi
 
     public int pxToDp(int px) {
         DisplayMetrics displayMetrics = changeLayoutActivity.getResources().getDisplayMetrics();
-        int dp = Math.round(px / (displayMetrics.xdpi / DisplayMetrics.DENSITY_DEFAULT));
-        return dp;
+        return Math.round(px / (displayMetrics.xdpi / DisplayMetrics.DENSITY_DEFAULT));
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {

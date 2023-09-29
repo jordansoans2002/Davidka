@@ -1,7 +1,7 @@
 package com.example.davidka;
 
 public class ButtonUpdate {
-    private String uri;
+    private final String uri;
     private ButtonUpdate next = null;
     boolean isVideo;
 

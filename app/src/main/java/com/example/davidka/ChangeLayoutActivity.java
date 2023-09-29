@@ -1,23 +1,7 @@
 package com.example.davidka;
 
-import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.PickVisualMediaRequest;
-import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.cardview.widget.CardView;
-import androidx.core.app.ActivityCompat;
-import androidx.preference.PreferenceManager;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.ItemTouchHelper;
-import androidx.recyclerview.widget.RecyclerView;
-
-import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -25,31 +9,46 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.DragEvent;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ImageView;
+import android.widget.Toast;
+
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
+import androidx.preference.PreferenceManager;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.gowtham.library.utils.TrimType;
 import com.gowtham.library.utils.TrimVideo;
 import com.yalantis.ucrop.UCrop;
 
 import java.io.File;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 public class ChangeLayoutActivity extends AppCompatActivity {
 
     List<SpeakButton> buttons;
-    int deletedButtons = 0;
+    static int addedButtons = 0, deletedButtons = 0;
+    static boolean cleanUp = false;
     RecyclerView edit_grid;
     CardView add_button;
     ImageView add_button_image;
 
     static int pos = -1;
     static Uri temp_uri = null;
-    private boolean permissionToRecordAccepted = false;
+    //    private boolean permissionToRecordAccepted = false;
+//    private boolean  permissionToReadExtStorage = false;
     static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
+    static final int REQUEST_READ_EXTERNAL_STORAGE_PERMISSION = 201;
     static final long MIN_VID_DURATION = 2;
     static final long MAX_VID_DURATION = 30;
     ChangeGridAdapter adapter;
@@ -57,69 +56,41 @@ public class ChangeLayoutActivity extends AppCompatActivity {
     SharedPreferences preferences;
 
 
-    ActivityResultLauncher<Intent> pickAudio = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<ActivityResult>() {
+    ActivityResultLauncher<Intent> pickImage = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<>() {
         @Override
         public void onActivityResult(ActivityResult o) {
-            Intent intent = o.getData();
             try {
-                Uri uri = intent.getData();
-                Log.d("choose intent", "Selected URI: " + uri + " " + uri.getPath() + " position: " + pos);
-                SpeakButton button = buttons.get(pos);
-                button.setSpeak(uri.toString());
-                adapter.notifyItemChanged(pos);
+                Intent intent = o.getData();
+                Uri uri = intent == null ? temp_uri : intent.getData();
+                if (o.getResultCode() == RESULT_OK && uri != null) {
+                    if (uri.toString().contains("image") || uri.toString().contains("jpeg") || uri.toString().contains("jpg")) {
+                        Uri dest_uri = Uri.fromFile(new File(getFilesDir(), UUID.randomUUID().toString() + ".jpg"));
+                        UCrop.of(uri, dest_uri)
+                                .withAspectRatio(1, 1)
+                                .start(ChangeLayoutActivity.this);
+                    } else if (uri.toString().contains("video") || uri.toString().contains("mp4")) {//VID,Movies,mp4
+
+                        TrimVideo.activity(uri.toString())
+                                .setHideSeekBar(true)
+                                .setAccurateCut(true)
+                                .setTrimType(TrimType.MIN_MAX_DURATION)
+                                .setMinToMax(MIN_VID_DURATION, MAX_VID_DURATION)
+                                .start(ChangeLayoutActivity.this, trimVideo);
+
+                    }
+                } else if (o.getResultCode() == RESULT_CANCELED)
+                    Log.e("camera", "cancelled");
             } catch (Exception ignored) {
-            }
-            pos = -1;
-        }
-    });
-    ActivityResultLauncher<Intent> pickImage = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<ActivityResult>() {
-        @Override
-        public void onActivityResult(ActivityResult o) {
-            Intent intent = o.getData();
-            Uri uri = intent == null ? temp_uri : intent.getData();
-            if (o.getResultCode() == RESULT_OK && uri != null) {
-                Log.e("return uri", uri.toString());
-                if (uri.toString().contains("image") || uri.toString().contains("jpeg") || uri.toString().contains("jpg")) {
-                    Uri dest_uri = Uri.fromFile(new File(getFilesDir(), UUID.randomUUID().toString() + ".jpg"));
-                    Log.e("dest uri", dest_uri.toString());
-                    UCrop.of(uri, dest_uri)
-                            .withAspectRatio(1, 1)
-                            .start(ChangeLayoutActivity.this);
-                } else if (uri.toString().contains("video") || uri.toString().contains("mp4")) {//VID,Movies,mp4
-
-                    TrimVideo.activity(uri.toString())
-                            .setHideSeekBar(true)
-                            .setAccurateCut(true)
-                            .setTrimType(TrimType.MIN_MAX_DURATION)
-                            .setMinToMax(MIN_VID_DURATION,MAX_VID_DURATION)
-                            .start(ChangeLayoutActivity.this, trimVideo);
-
-                }
+                ignored.printStackTrace();
             }
         }
     });
-
-    ActivityResultLauncher<PickVisualMediaRequest> pickMedia =
-            registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
-                // Callback is invoked after the user selects a media item or closes the
-                // photo picker.
-                if (uri != null) {
-                    Log.d("PhotoPicker", "Selected URI: " + uri);
-                    String dest_uri = UUID.randomUUID().toString() + ".jpg";
-                    UCrop.of(uri, Uri.fromFile(new File(getFilesDir(), dest_uri)))
-                            .withAspectRatio(1, 1)
-                            .start(ChangeLayoutActivity.this);
-                } else {
-                    Log.d("PhotoPicker", "No media selected");
-                }
-            });
 
     ActivityResultLauncher<Intent> trimVideo = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     Uri uri = Uri.parse(TrimVideo.getTrimmedVideoPath(result.getData()));
-                    Log.e("dest uri", uri.toString());
                     buttons.get(pos).setPicture(uri.toString(), true);
                     adapter.notifyItemChanged(pos);
                     pos = -1;
@@ -135,33 +106,35 @@ public class ChangeLayoutActivity extends AppCompatActivity {
             final Uri resultUri = UCrop.getOutput(data);
             SpeakButton button = buttons.get(pos);
             button.setPicture(resultUri.toString(), false);
-            Log.e("result uri", resultUri.toString());
             adapter.notifyItemChanged(pos);
             pos = -1;
         } else if (resultCode == UCrop.RESULT_ERROR) {
-            final Throwable cropError = UCrop.getError(data);
+            Toast.makeText(
+                    this,
+                    "Video was not recorded",
+                    Toast.LENGTH_LONG
+            ).show();
         }
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case REQUEST_RECORD_AUDIO_PERMISSION:
-                permissionToRecordAccepted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-                break;
-        }
-        if (!permissionToRecordAccepted) finish();
-
-    }
+//    @Override
+//    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+//        switch (requestCode) {
+//            case REQUEST_RECORD_AUDIO_PERMISSION:
+//                permissionToRecordAccepted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+//                break;
+//            case REQUEST_READ_EXTERNAL_STORAGE_PERMISSION:
+//                 permissionToReadExtStorage = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+//                 break;
+//        }
+//    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_layout);
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO}, ChangeLayoutActivity.REQUEST_RECORD_AUDIO_PERMISSION);
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
-
         edit_grid = findViewById(R.id.edit_grid);
         add_button = findViewById(R.id.add_button);
         add_button_image = findViewById(R.id.add_button_image);
@@ -171,7 +144,7 @@ public class ChangeLayoutActivity extends AppCompatActivity {
             buttons = db.speakButtonDao().getAllButtons();
 
             new Handler(Looper.getMainLooper()).post(() -> {
-                adapter = new ChangeGridAdapter(this, pickAudio, pickImage);
+                adapter = new ChangeGridAdapter(this, pickImage);
                 edit_grid.setAdapter(adapter);
                 gridLayoutManager = new GridLayoutManager(this, 2);
                 edit_grid.setLayoutManager(gridLayoutManager);
@@ -180,15 +153,20 @@ public class ChangeLayoutActivity extends AppCompatActivity {
         }).start();
 
         add_button.setOnClickListener((view) -> {
-            buttons.add(new SpeakButton(buttons.size(),null,null,"",false));
+            SpeakButton button = new SpeakButton(buttons.size(), null, null, "", false);
+            buttons.add(button);
             adapter.notifyItemInserted(buttons.size() - 1);
+            edit_grid.scrollToPosition(buttons.size() - 1);
 
-            new Thread(() -> {
-                DatabaseHelper db = DatabaseHelper.getDB(this);
-                db.speakButtonDao().addSpeakButton(buttons.get(buttons.size() - 1));
-                deletedButtons--;
-            }).start();
+            addedButtons++;
+            deletedButtons--;
+//            new Thread(() -> {
+//                DatabaseHelper db = DatabaseHelper.getDB(this);
+//                db.speakButtonDao().addSpeakButton(buttons.get(buttons.size() - 1));
+//                deletedButtons--;
+//            }).start();
         });
+
         add_button.setOnDragListener((view, dragEvent) -> {
             switch (dragEvent.getAction()) {
                 case DragEvent.ACTION_DRAG_STARTED:
@@ -211,8 +189,9 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                     int pos = Integer.parseInt(dragEvent.getClipData().getItemAt(0).getText().toString());
                     SpeakButton button = buttons.get(pos);
                     deletedButtons++;
+                    addedButtons--;
                     button.deleteButton();
-                    if (buttons.size() > 8){
+                    if (buttons.size() > 8) {
                         buttons.remove(pos);
                         adapter.notifyItemRemoved(pos);
                     } else
@@ -233,6 +212,32 @@ public class ChangeLayoutActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+        if (!cleanUp) {
+            new Thread(() -> {
+                DatabaseHelper db = DatabaseHelper.getDB(this);
+                for (int i = 0; i < buttons.size(); i++) {
+                    SpeakButton button = buttons.get(i);
+
+                    if (button.rootSpeak.getNext() == null && button.rootPicture.getNext() == null)
+                        continue;
+                    if (button.rootSpeak.getNext() != null)
+                        button.deleteUpdates(getFilesDir(), button.rootSpeak, false);
+
+                    if (button.rootPicture.getNext() != null) {
+                        if (button.leafSpeak.getUri() != null && button.isVideo)
+                            SpeakButton.deleteFile(getFilesDir(), button.rootSpeak.getUri(), false);
+                        button.deleteUpdates(getFilesDir(), button.rootPicture, false);
+                    }
+                }
+                for (int i = buttons.size(); i < buttons.size() + ChangeLayoutActivity.deletedButtons; i++)
+                    db.speakButtonDao().deleteButtonByPosition(i);
+            }).start();
+        }
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.edit_action_bar, menu);
         return super.onCreateOptionsMenu(menu);
@@ -240,32 +245,44 @@ public class ChangeLayoutActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.save_changes:
-                AlertBox keepChanges = new AlertBox(
-                        this,
-                        "Keep changes",
-                        "Save changes made to all buttons?");
-                keepChanges.gridChanges(buttons, deletedButtons,true);
-                return true;
-            case R.id.cancel_changes:
-                AlertBox discardChanges = new AlertBox(
-                        adapter.changeLayoutActivity,
-                        "Discard changes",
-                        "Discard changes made to all buttons?");
-                discardChanges.gridChanges(buttons,deletedButtons, false);
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
+        if (item.getItemId() == R.id.save_changes) {
+            AlertBox keepChanges = new AlertBox(
+                    this,
+                    "Keep changes",
+                    "Save changes made to all buttons?");
+            keepChanges.gridChanges(buttons, true);
+            return true;
+        } else if (item.getItemId() == R.id.cancel_changes) {
+            AlertBox discardChanges = new AlertBox(
+                    adapter.changeLayoutActivity,
+                    "Discard changes",
+                    "Discard changes made to all buttons?");
+            discardChanges.gridChanges(buttons, false);
+            return true;
+        } else
+            return super.onOptionsItemSelected(item);
     }
 
     @Override
-    public void onBackPressed() {
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        //super.onKeyDown(keyCode, event);
+        if (keyCode == KeyEvent.KEYCODE_BACK)
+            Log.e("back", "back button pressed keydown");
         AlertBox discardChanges = new AlertBox(
                 adapter.changeLayoutActivity,
                 "Discard changes",
                 "Discard changes made to all buttons?");
-        discardChanges.gridChanges(buttons,deletedButtons, false);
+        discardChanges.gridChanges(buttons, false);
+        return false;
+    }
+
+    @Override
+    public void onBackPressed() {
+        Log.e("back", "back button pressed onBackPressed");
+        AlertBox discardChanges = new AlertBox(
+                adapter.changeLayoutActivity,
+                "Discard changes",
+                "Discard changes made to all buttons?");
+        discardChanges.gridChanges(buttons, false);
     }
 }

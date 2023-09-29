@@ -32,7 +32,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="fitCenter"
-            app:srcCompat="@drawable/baseline_add_24" />
+            app:srcCompat="@drawable/baseline_add_24"
+            android:contentDescription="@string/add_button_description" />
     </androidx.cardview.widget.CardView>
 
     <androidx.gridlayout.widget.GridLayout
