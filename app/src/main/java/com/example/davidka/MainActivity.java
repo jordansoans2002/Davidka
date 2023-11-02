@@ -2,6 +2,7 @@ package com.example.davidka;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -11,12 +12,15 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ImageView;
 import android.widget.VideoView;
 
 import java.util.ArrayList;
@@ -26,6 +30,9 @@ public class MainActivity extends AppCompatActivity {
 
     static List<SpeakButton> buttons = new ArrayList<>();
     RecyclerView picture_grid;
+//    CardView picture;
+//    ImageView img;
+//    VideoView vid;
     PictureGridAdapter adapter;
     SharedPreferences preferences;
     MediaPlayer speak;
@@ -37,6 +44,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         picture_grid = findViewById(R.id.picture_grid);
+//        picture = findViewById(R.id.picture);
+//        img = findViewById(R.id.img);
+//        vid = findViewById(R.id.vid);
         isStartup = true;
     }
 
@@ -66,6 +76,8 @@ public class MainActivity extends AppCompatActivity {
             new Handler(Looper.getMainLooper()).post(() -> {
                 adapter = new PictureGridAdapter(this, buttons);
                 picture_grid.setAdapter(adapter);
+//                vid.setVisibility(View.VISIBLE);
+//                vid.setVideoURI(Uri.parse(buttons.get(0).getPicture()));
                 picture_grid.setLayoutManager(new GridLayoutManager(this, 2));
             });
         }).start();
