@@ -85,7 +85,7 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
             }
         } catch (NullPointerException nullPointerException) {
             if (!mainActivity.preferences.getBoolean("blankButton", false))
-                holder.img.setImageResource(R.mipmap.ic_launcher);
+                holder.img.setImageResource(R.drawable.aleron_biker_remove_background);
         }
 
         if (mainActivity.preferences.getBoolean("showText", false) && button.getSpokenText().length() > 0) {
