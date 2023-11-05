@@ -1,10 +1,12 @@
         package com.example.davidka;
 
+import android.annotation.SuppressLint;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -48,6 +50,7 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
         return new ViewHolder(view);
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     public void onBindViewHolder(@NonNull PictureGridAdapter.ViewHolder holder, int position) {
         SpeakButton button = buttons.get(holder.getAbsoluteAdapterPosition());
@@ -94,6 +97,13 @@ public class PictureGridAdapter extends RecyclerView.Adapter<PictureGridAdapter.
         } else
             holder.txt.setVisibility(View.GONE);
 
+        holder.picture.setOnTouchListener((view,motionEvent) -> {
+            if(MotionEvent.ACTION_UP == motionEvent.getAction()){
+                view.performClick();
+                return true;
+            }
+            return false;
+        });
         holder.picture.setOnClickListener((View view) -> {
             Log.e("vid","pressed");
             if (!buttons.get(holder.getAbsoluteAdapterPosition()).isVideo) {
