@@ -42,7 +42,7 @@
                 android:layout_alignParentEnd="true"
                 android:layout_alignParentBottom="false"
                 android:contentDescription="@string/button_description"
-                android:scaleType="fitXY"
+                android:scaleType="centerCrop"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"

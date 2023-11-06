@@ -71,15 +71,14 @@ public class ChangeLayoutActivity extends AppCompatActivity {
                     } else if (uri.toString().contains("video") || uri.toString().contains("mp4")) {//VID,Movies,mp4
 
                         TrimVideo.activity(uri.toString())
-                                .setHideSeekBar(true)
+                                .setHideSeekBar(false)
                                 .setAccurateCut(true)
                                 .setTrimType(TrimType.MIN_MAX_DURATION)
                                 .setMinToMax(MIN_VID_DURATION, MAX_VID_DURATION)
                                 .start(ChangeLayoutActivity.this, trimVideo);
 
                     }
-                } else if (o.getResultCode() == RESULT_CANCELED)
-                    Log.e("camera", "cancelled");
+                }
             } catch (Exception ignored) {
                 ignored.printStackTrace();
             }
